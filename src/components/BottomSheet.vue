@@ -335,7 +335,7 @@ const endDrag = () => {
   const currentHeight = parseFloat(panelHeight.value)
   const vh = window.innerHeight
 
-  if (canSwipeClose.value && currentHeight < vh * 0.2) {
+  if (canSwipeClose.value && currentHeight < vh * 0.1) {
     emit('dragEnd', currentSnapIndex.value)
     close()
     cleanup()
