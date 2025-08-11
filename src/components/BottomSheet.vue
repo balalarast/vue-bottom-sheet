@@ -29,7 +29,7 @@ const props = withDefaults(
   {
     darkMode: false,
     canSwipeClose: true,
-    snapPoints: () => ['30%', '60%', '90%'],
+    snapPoints: () => [200, '60%', '90%'],
     initialSnapPoint: 0,
     overlay: false,
     teleportTo: 'body',

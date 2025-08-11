@@ -92,7 +92,7 @@ export default defineNuxtConfig({
 |---------------------|------------------------------|------------------------|----------------------------------------------|
 | `darkMode`          | `boolean`                    | `false`                | Enables dark mode                            |
 | `canSwipeClose`     | `boolean`                    | `true`                 | Allows closing the sheet by swiping down    |
-| `snapPoints`        | `Array<number \| string>`    | `['30%', '60%', '90%']`| Snap points as percentage or pixels         |
+| `snapPoints`        | `Array<number \| string>`    | `[200, '60%', '90%']`| Snap points as percentage or pixels         |
 | `initialSnapPoint`  | `number`                     | `0`                    | Initial snap point index                     |
 | `overlay`           | `boolean`                    | `false`                | Shows a dark overlay behind the sheet       |
 | `teleportTo`        | `string`                     | `'body'`               | Element selector for teleport rendering     |
