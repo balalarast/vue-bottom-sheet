@@ -224,6 +224,40 @@ function handleDragEnd(finalIndex: number) {
 </template>
 ```
 
+<details>
+<summary>💡 Bottom Sheet Styling Documentation</summary>
+
+| Class / Variable        | Type          | Description                                                                   |
+|------------------------|---------------|-------------------------------------------------------------------------------|
+| `--ba-overlay-bg`       | CSS Variable  | Background color of the semi-transparent overlay behind the bottom sheet      |
+| `--ba-bg`               | CSS Variable  | Background color of the bottom sheet in light mode                            |
+| `--ba-bg-dark`          | CSS Variable  | Background color of the bottom sheet in dark mode                             |
+| `--ba-border-color`     | CSS Variable  | Border color in light mode                                                    |
+| `--ba-border-color-dark`| CSS Variable  | Border color in dark mode                                                     |
+| `--ba-radius`           | CSS Variable  | Border radius for the top corners of the bottom sheet                         |
+| `--ba-shadow`           | CSS Variable  | Box shadow around the bottom sheet                                            |
+| `--ba-max-width`        | CSS Variable  | Maximum width of the bottom sheet                                             |
+| `--ba-handle-width`     | CSS Variable  | Width of the drag handle                                                      |
+| `--ba-handle-height`    | CSS Variable  | Height of the drag handle                                                     |
+| `--ba-handle-color`     | CSS Variable  | Color of the drag handle in light mode                                        |
+| `--ba-handle-color-dark`| CSS Variable  | Color of the drag handle in dark mode                                         |
+| `--ba-padding`          | CSS Variable  | General padding inside sections                                               |
+| `--ba-padding-small`    | CSS Variable  | Smaller padding                                                              |
+| `.ba-bs-container`      | CSS Class     | The main container fixed on the page with high z-index and pointer blocking   |
+| `.ba-bs-overlay`        | CSS Class     | Semi-transparent overlay behind the sheet for a darkening effect              |
+| `.ba-bs-sheet`          | CSS Class     | The bottom sheet panel itself with background, border radius, shadow, and max width |
+| `.ba-bs-wrapper`        | CSS Class     | Inner container for vertical layout of header, content, and footer            |
+| `.ba-bs-header`         | CSS Class     | The header area with padding and the drag handle                              |
+| `.ba-bs-header::before` | CSS Class     | The drag handle bar shown at the top of the header                            |
+| `.ba-bs-scroll`         | CSS Class     | Scrollable content area with smooth scrolling behavior                        |
+| `.ba-bs-scroll--hidden` | CSS Class     | Hides the scrollbar                                                          |
+| `.ba-bs-scroll--no-pull`| CSS Class     | Prevents pull-to-refresh gesture on mobile                                   |
+| `.ba-bs-content`        | CSS Class     | Content container with proper padding                                        |
+| `.ba-bs-footer`         | CSS Class     | Footer section with padding and top border                                   |
+| `[data-theme='dark']`   | CSS Selector  | Applies color changes for dark mode (background, handle, borders)            |
+
+</details>
+
 ## Running Tests
 The project uses Vitest for testing.
 
