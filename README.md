@@ -117,7 +117,8 @@ This component exposes several methods and properties via `ref` so you can contr
 | `isOpened` | `ComputedRef<boolean>` | Indicates whether the Bottom Sheet is currently open (read-only). |
 
 
-### Example
+<details>
+<summary>Example</summary>
 
 ```bash
 <script setup lang="ts">
@@ -151,6 +152,7 @@ onMounted(() => {
   </BottomSheet>
 </template>
 ```
+</details>
 
 ## Events
 
@@ -162,7 +164,8 @@ onMounted(() => {
 | `dragStart`  | `()`                   | Fired when the user starts dragging the Bottom Sheet.    |
 | `dragEnd`    | `(finalIndex: number)` | Fired when the user finishes dragging and the sheet settles at a snap point. |
 
-### Example
+<details>
+<summary>Example</summary>
 
 ```bash
 <script setup lang="ts">
@@ -223,6 +226,7 @@ function handleDragEnd(finalIndex: number) {
   </BottomSheet>
 </template>
 ```
+</details>
 
 ## Styling guide
 <details>
