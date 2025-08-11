@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Motion } from '@oku-ui/motion'
+import { Motion } from '@oku-ui/motion';
 import {
   type ComponentPublicInstance,
   computed,
@@ -7,7 +7,7 @@ import {
   onMounted,
   ref,
   watch,
-} from 'vue'
+} from 'vue';
 
 const props = withDefaults(
   defineProps<{
@@ -43,6 +43,21 @@ const props = withDefaults(
     springDamping: 30,
   },
 )
+
+/**
+ * @emits open - emitted when the bottom sheet is opened
+ * @emits close - emitted when the bottom sheet is closed
+ * @emits snapChange - emitted when the snap point changes, provides the snap index
+ * @emits dragStart - emitted when dragging starts
+ * @emits dragEnd - emitted when dragging ends, provides the final snap index
+ */
+const emit = defineEmits<{
+  (e: 'open'): void
+  (e: 'close'): void
+  (e: 'snapChange', index: number): void
+  (e: 'dragStart'): void
+  (e: 'dragEnd', finalIndex: number): void
+}>()
 
 const show = ref(false)
 const isClient = ref(false)
@@ -89,19 +104,32 @@ watch(
   newVal => {
     snapPoints.value = newVal
     updatePixelSnapPoints(newVal)
+    if (pixelSnapPoints.value.length === 0) {
+      pixelSnapPoints.value = [100]
+      console.warn('pixelSnapPoints was empty after update, set default 100px')
+    }
   },
   { immediate: true },
 )
 
 function updatePixelSnapPoints(snapPts: typeof props.snapPoints) {
   const vh = window.innerHeight
-  pixelSnapPoints.value = snapPts.map(p =>
-    typeof p === 'string' && p.endsWith('%')
-      ? (parseFloat(p) / 100) * vh
-      : typeof p === 'number'
-        ? p
-        : 0,
-  )
+  pixelSnapPoints.value = snapPts
+    .map(p => {
+      let val = 0
+      if (typeof p === 'string' && p.endsWith('%')) {
+        val = (parseFloat(p) / 100) * vh
+      } else if (typeof p === 'number') {
+        val = p
+      }
+      val = Number(val.toFixed(2))
+      if (isNaN(val) || val <= 0) {
+        console.warn(`Invalid snap point value detected: ${p}. Ignored.`)
+        return null
+      }
+      return val
+    })
+    .filter((v): v is number => v !== null)
 }
 
 // Drag state and parameters
@@ -121,11 +149,24 @@ function cleanupMotionHandler() {
   motionResolveHandler = null
 }
 
+function getValidInitialHeight(): number {
+  let initialHeight =
+    pixelSnapPoints.value[props.initialSnapPoint] ??
+    pixelSnapPoints.value[0]
+
+  if (isNaN(initialHeight) || initialHeight <= 0) {
+    console.warn(
+      `Invalid initial height detected: ${initialHeight}. Setting to 100px default.`,
+    )
+    initialHeight = 100
+  }
+  return initialHeight
+}
+
 onMounted(() => {
   isClient.value = true
 
-  const initialHeight =
-    pixelSnapPoints.value[props.initialSnapPoint] ?? pixelSnapPoints.value[0]
+  const initialHeight = getValidInitialHeight()
 
   panelHeight.value = `${initialHeight}px`
   targetHeight.value = `${initialHeight}px`
@@ -135,11 +176,10 @@ async function open() {
   return new Promise<void>(resolve => {
     show.value = true
     targetHeight.value = '0px'
+    emit('open')
 
     nextTick(() => {
-      const initialHeight =
-        pixelSnapPoints.value[props.initialSnapPoint] ??
-        pixelSnapPoints.value[0]
+      const initialHeight = getValidInitialHeight()
 
       targetHeight.value = `${initialHeight}px`
       currentSnapIndex.value = props.initialSnapPoint
@@ -159,6 +199,7 @@ watch(targetHeight, newHeight => {
   if (newHeight === '0px') {
     show.value = false
     cleanup()
+    emit('close')
   }
 
   if (motionResolveHandler) {
@@ -176,6 +217,8 @@ function snapToPoint(index: number) {
   currentSnapIndex.value = index
   const point = pixelSnapPoints.value[index]
   targetHeight.value = `${point}px`
+
+  emit('snapChange', index)
 }
 
 const handleDragDecision = (currentClientY: number) => {
@@ -229,6 +272,8 @@ const onPointerDrag = (e: PointerEvent) => {
   if (!dragging) return
   if (!handleDragDecision(e.clientY)) return
 
+  emit('dragStart')
+
   pendingDelta = startHeight + (startY - e.clientY)
 
   if (!rafId) {
@@ -244,6 +289,8 @@ const onTouchDrag = (e: TouchEvent) => {
   if (!handleDragDecision(e.touches[0].clientY)) return
 
   e.preventDefault()
+
+  emit('dragStart')
 
   pendingDelta = startHeight + (startY - e.touches[0].clientY)
 
@@ -289,6 +336,7 @@ const endDrag = () => {
   const vh = window.innerHeight
 
   if (canSwipeClose.value && currentHeight < vh * 0.2) {
+    emit('dragEnd', currentSnapIndex.value)
     close()
     cleanup()
     return
@@ -318,6 +366,8 @@ const endDrag = () => {
   currentSnapIndex.value = closestIndex
 
   cleanup()
+
+  emit('dragEnd', currentSnapIndex.value)
 }
 
 const cleanup = () => {

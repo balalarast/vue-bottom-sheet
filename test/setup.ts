@@ -19,8 +19,13 @@ afterEach(() => {
 if (typeof PointerEvent === 'undefined') {
   // @ts-ignore
   global.PointerEvent = class PointerEvent extends Event {
-    constructor(type: string, eventInitDict?: EventInit) {
+    clientX: number
+    clientY: number
+
+    constructor(type: string, eventInitDict?: EventInit & { clientX?: number; clientY?: number }) {
       super(type, eventInitDict)
+      this.clientX = eventInitDict?.clientX ?? 0
+      this.clientY = eventInitDict?.clientY ?? 0
     }
   }
 }

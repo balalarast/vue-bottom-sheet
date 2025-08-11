@@ -77,7 +77,7 @@ function openSheet() {
 
 ### 3. Using Nuxt Module (Recommended)
 
-If you have enabled the Nuxt module, make sure to add it in your __nuxt.config.ts__ like this so that the component is automatically available throughout your project:
+If you have enabled the Nuxt module, make sure to add it in your `nuxt.config.ts` like this so that the component is automatically available throughout your project:
 
 ```ts
 export default defineNuxtConfig({
@@ -104,6 +104,126 @@ export default defineNuxtConfig({
 | `smoothFactor`      | `number`                     | `0.7`                  | Smoothing factor for height animation       |
 | `springStiffness`   | `number`                     | `300`                  | Spring animation stiffness                   |
 | `springDamping`     | `number`                     | `30`                   | Spring animation damping                      |
+
+## Exposed Methods & Properties
+
+This component exposes several methods and properties via `ref` so you can control it programmatically.
+
+| Name | Type | Description |
+|------|------|-------------|
+| `open()` | `Promise<void>` | Opens the Bottom Sheet to the initial snap point or the one specified in `initialSnapPoint`. |
+| `close()` | `Promise<void>` | Closes the Bottom Sheet with an animation. |
+| `snapToPoint(index: number)` | `void` | Moves the Bottom Sheet to the snap point at the given index (based on the `snapPoints` array). |
+| `isOpened` | `ComputedRef<boolean>` | Indicates whether the Bottom Sheet is currently open (read-only). |
+
+
+### Example
+
+```bash
+<script setup lang="ts">
+import BottomSheet from '@balalarast/vue-bottom-sheet'
+const sheetRef = ref<InstanceType<typeof BottomSheet>>()
+
+function openSheet() {
+  sheetRef.value?.open()
+}
+
+function closeSheet() {
+  sheetRef.value?.close()
+}
+
+function goToSecondSnap() {
+  sheetRef.value?.snapToPoint(1)
+}
+
+</script>
+
+<template>
+  <button @click="openSheet">Open</button>
+  <button @click="closeSheet">Close</button>
+  <button @click="goToSecondSnap">Go to 60%</button>
+
+  <BottomSheet ref="sheetRef" :overlay="true">
+    <p>Your content here...</p>
+  </BottomSheet>
+</template>
+```
+
+## Events
+
+| Event Name   | Parameters             | Description                                              |
+|--------------|------------------------|----------------------------------------------------------|
+| `open`       | `()`                   | Fired when the Bottom Sheet is fully opened.             |
+| `close`      | `()`                   | Fired when the Bottom Sheet is closed.                    |
+| `snapChange` | `(snapIndex: number)`  | Fired when the Bottom Sheet changes to a new snap point. |
+| `dragStart`  | `()`                   | Fired when the user starts dragging the Bottom Sheet.    |
+| `dragEnd`    | `(finalIndex: number)` | Fired when the user finishes dragging and the sheet settles at a snap point. |
+
+### Example
+
+```bash
+<script setup lang="ts">
+import BottomSheet from '@balalarast/vue-bottom-sheet'
+const sheetRef = ref<InstanceType<typeof BottomSheet>>()
+
+function openSheet() {
+  sheetRef.value?.open()
+}
+
+function closeSheet() {
+  sheetRef.value?.close()
+}
+
+// Events
+function handleOpen() {
+  console.log('Bottom Sheet opened')
+}
+
+function handleClose() {
+  console.log('Bottom Sheet closed')
+}
+
+function handleSnapChange(snapIndex: number) {
+  console.log('Snap changed to index:', snapIndex)
+}
+
+function handleDragStart() {
+  console.log('Drag started')
+}
+
+function handleDragEnd(finalIndex: number) {
+  console.log('Drag ended at index:', finalIndex)
+}
+
+onMounted(() => {
+  openSheet()
+})
+</script>
+
+<template>
+  <div class="p-4 space-x-2">
+    <button @click="openSheet">Open</button>
+    <button @click="closeSheet">Close</button>
+  </div>
+
+  <BottomSheet
+    ref="sheetRef"
+    :snap-points="[100, 300, '100%']"
+    initial-snap-point="1"
+    @open="handleOpen"
+    @close="handleClose"
+    @snapChange="handleSnapChange"
+    @dragStart="handleDragStart"
+    @dragEnd="handleDragEnd"
+    @vue:mounted="openSheet"
+  >
+    <div>
+      <h2>Bottom Sheet Content</h2>
+      <p>This is some content inside the bottom sheet.</p>
+    </div>
+  </BottomSheet>
+</template>
+```
 
 ## Running Tests
 The project uses Vitest for testing.
