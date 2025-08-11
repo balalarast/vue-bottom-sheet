@@ -1,0 +1,44 @@
+{
+  "name": "@balalarast/vue-bottom-sheet",
+  "version": "0.0.1",
+  "description": "A bottom sheet component for Vue 3 and Nuxt 3",
+  "type": "module",
+  "main": "index.ts",
+  "types": "index.ts",
+  "files": [
+    "src",
+    "index.ts",
+    "nuxt.ts"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest --watch"
+  },
+  "keywords": [
+    "vue",
+    "nuxt",
+    "bottom-sheet",
+    "component"
+  ],
+  "author": "Balal Arast <arastbalal@gmail.com>",
+  "license": "MIT",
+  "peerDependencies": {
+    "nuxt": "^3.18.1",
+    "vue": "^3.5.18"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vitest/ui": "^3.2.4",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^21.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^5.4.19",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@oku-ui/motion": "^0.4.3"
+  },
+  "packageManager": "pnpm@8.14.0+sha512.5d4bf97b349faf1a51318aa1ba887e99d9c36e203dbcb55938a91fddd2454246cb00723d6642f54d463a0f52a2701dadf8de002a37fc613c9cdc94ed5675ddce"
+}
