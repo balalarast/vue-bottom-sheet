@@ -224,8 +224,9 @@ function handleDragEnd(finalIndex: number) {
 </template>
 ```
 
+## Bottom Sheet Component Styling Guide
 <details>
-<summary>💡 Bottom Sheet Styling Documentation</summary>
+<summary>💡 Styling Variables and Classes Reference</summary>
 
 | Class / Variable        | Type          | Description                                                                   |
 |------------------------|---------------|-------------------------------------------------------------------------------|
