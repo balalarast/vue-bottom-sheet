@@ -104,7 +104,7 @@ function updatePixelSnapPoints(snapPts: typeof props.snapPoints) {
   )
 }
 
-// وضعیت درگ و پارامترها
+// Drag state and parameters
 let startY = 0
 let startHeight = 0
 let dragging = false
@@ -115,7 +115,7 @@ const smoothFactor = props.smoothFactor!
 const useEasing = true
 const maxOvershootRatio = 1 + props.maxOvershootPercent / 100
 
-// متغیر برای مدیریت Promise در open و close
+// Variable to manage the Promise in open and close methods
 let motionResolveHandler: (() => void) | null = null
 function cleanupMotionHandler() {
   motionResolveHandler = null
@@ -411,7 +411,7 @@ defineExpose({ open, close, snapToPoint, isOpened: computed(() => show.value) })
 
 <style>
 :root {
-  --ba-overlay-bg: rgba(0, 0, 0, 0.5);
+  --ba-overlay-bg: rgba(15, 23, 42, 0.5);
   --ba-bg: #ffffff;
   --ba-bg-dark: rgb(30, 41, 59);
   --ba-border-color: rgb(229, 231, 235);

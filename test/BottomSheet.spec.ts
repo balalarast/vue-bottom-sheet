@@ -175,12 +175,12 @@ describe('BottomSheet', () => {
     const vm = wrapper.vm as any
   
     vm.startDrag(new PointerEvent('pointerdown'))
-    vm.panelHeight = '10px' // کمتر از 20% vh فرضی
+    vm.panelHeight = '10px' // Less than 20% of the viewport height (vh)
     vm.endDrag()
     await wrapper.vm.$nextTick()
   
     expect(vm.isDragging).toBe(false)
-    expect(vm.show).toBe(true)  // پنل نباید بسته شود
+    expect(vm.show).toBe(true)  // The panel must not close.
   })
 
   it('focuses the sheet element after open', async () => {
@@ -232,7 +232,7 @@ describe('BottomSheet', () => {
     await wrapper.vm.open()
     const vm = wrapper.vm as any
   
-    // شروع درگ از اسکرول
+    // Start drag from scroll
     vm.startDragFromScroll(new PointerEvent('pointerdown'))
     expect(vm.isDragging).toBe(true)
   })

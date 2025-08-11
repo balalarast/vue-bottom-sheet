@@ -13,7 +13,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  // اینجا اگه cleanup اضافه بخوای میتونی بذاری
+  // افزودن cleanup اضافه
 })
 
 if (typeof PointerEvent === 'undefined') {
