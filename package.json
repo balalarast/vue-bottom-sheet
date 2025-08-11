@@ -1,10 +1,20 @@
 {
   "name": "@balalarast/vue-bottom-sheet",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "description": "A bottom sheet component for Vue 3 and Nuxt 3",
   "type": "module",
   "main": "index.ts",
   "types": "index.ts",
+  "exports": {
+    ".": {
+      "import": "./index.ts",
+      "require": "./index.js"
+    },
+    "./nuxt": {
+      "import": "./nuxt.ts",
+      "require": "./nuxt.js"
+    }
+  },
   "files": [
     "src",
     "index.ts",

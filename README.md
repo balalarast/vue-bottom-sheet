@@ -28,7 +28,7 @@ yarn add @balalarast/vue-bottom-sheet
 import BottomSheet from '@balalarast/vue-bottom-sheet'
 import { ref } from 'vue'
 
-const sheetRef = ref(null)
+const sheetRef = ref<InstanceType<typeof BottomSheet>>()
 
 function openSheet() {
   sheetRef.value?.open()
@@ -58,6 +58,8 @@ export default defineNuxtPlugin(nuxtApp => {
 
 ```ts
 <script setup lang="ts">
+// import BottomSheet from '@balalarast/vue-bottom-sheet'
+// const sheetRef = ref<InstanceType<typeof BottomSheet>>()
 const sheetRef = ref(null)
 
 function openSheet() {
@@ -69,6 +71,18 @@ function openSheet() {
   <button @click="openSheet">Open Bottom Sheet</button>
   <BottomSheet ref="sheetRef" :overlay="true" />
 </template>
+```
+
+### 3. Using Nuxt Module (Recommended)
+
+If you have enabled the Nuxt module, make sure to add it in your __nuxt.config.ts__ like this so that the component is automatically available throughout your project:
+
+```ts
+export default defineNuxtConfig({
+  modules: [
+    '@balalarast/vue-bottom-sheet/nuxt'
+  ],
+})
 ```
 
 ## Props and Configuration
