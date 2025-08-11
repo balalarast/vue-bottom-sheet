@@ -3,6 +3,8 @@
 Bottom Sheet component for Vue 3 and Nuxt 3 with drag support, multiple snap points, and dark mode.  
 Built with [@oku-ui/motion](https://motion.oku-ui.com) for smooth and performant animations.
 
+![Demo Screen](demo-screen.gif)
+
 ## Features
 
 - Compatible with Vue 3 and Nuxt 3
