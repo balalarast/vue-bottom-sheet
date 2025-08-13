@@ -72,7 +72,8 @@ const pixelSnapPoints = ref<number[]>([])
 const isDragging = ref(false)
 const canSwipeClose = ref(props.canSwipeClose)
 const snapPoints = ref(props.snapPoints)
-const currentSnapIndex = ref(props.initialSnapPoint ?? 0)
+const initialSnapPoint = ref(props.initialSnapPoint)
+const currentSnapIndex = ref(initialSnapPoint.value)
 const isScrollAllowed = ref(false)
 const expandOnContentDrag = ref(props.expandOnContentDrag)
 const snapToPrevOnTop = ref(props.snapToPrevOnTop)
@@ -98,6 +99,11 @@ const maxSnapIndex = computed(() =>
 const canScrollDrag = computed(
   () =>
     expandOnContentDrag.value && currentSnapIndex.value < maxSnapIndex.value,
+)
+
+watch(
+  () => props.initialSnapPoint,
+  newVal => (initialSnapPoint.value = newVal),
 )
 
 watch(
@@ -167,7 +173,7 @@ const maxOvershootRatio = 1 + 0.2
 
 function getValidInitialHeight(): number {
   let initialHeight =
-    pixelSnapPoints.value[props.initialSnapPoint] ?? pixelSnapPoints.value[0]
+    pixelSnapPoints.value[initialSnapPoint.value] ?? pixelSnapPoints.value[0]
 
   if (isNaN(initialHeight) || initialHeight <= 0) {
     console.warn(
@@ -200,7 +206,7 @@ async function open() {
       const initialHeight = getValidInitialHeight()
 
       targetHeight.value = `${initialHeight}px`
-      currentSnapIndex.value = props.initialSnapPoint
+      currentSnapIndex.value = initialSnapPoint.value
       resolve()
     })
   })
