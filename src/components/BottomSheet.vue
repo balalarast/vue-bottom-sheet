@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Motion } from '@oku-ui/motion';
+import { Motion } from '@oku-ui/motion'
 import {
   type ComponentPublicInstance,
   computed,
@@ -7,7 +7,7 @@ import {
   onMounted,
   ref,
   watch,
-} from 'vue';
+} from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -21,10 +21,13 @@ const props = withDefaults(
     hideScrollbar?: boolean
     preventPullToRefresh?: boolean
     expandOnContentDrag?: boolean
-    maxOvershootPercent?: 20 | 40 | 60 | 80 | 100
+    /**
+     * Moves panel to previous snap point when dragging from top of content,
+     * only works if expandOnContentDrag is false
+     */
+    snapToPrevOnTop?: boolean
     smoothFactor?: number
-    springStiffness?: number
-    springDamping?: number
+    animationDuration?: number
   }>(),
   {
     darkMode: false,
@@ -37,10 +40,9 @@ const props = withDefaults(
     hideScrollbar: false,
     preventPullToRefresh: true,
     expandOnContentDrag: false,
-    maxOvershootPercent: 100,
+    snapToPrevOnTop: false,
     smoothFactor: 0.7,
-    springStiffness: 300,
-    springDamping: 30,
+    animationDuration: 150,
   },
 )
 
@@ -56,10 +58,11 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'snapChange', index: number): void
   (e: 'dragStart'): void
-  (e: 'dragEnd', finalIndex: number): void
+  (e: 'dragEnd', finalIndex: number | null): void
 }>()
 
 const show = ref(false)
+const hasBeenOpened = ref(false)
 const isClient = ref(false)
 const sheetRef = ref<ComponentPublicInstance | null>(null)
 const scrollRef = ref<HTMLElement | null>(null)
@@ -72,12 +75,20 @@ const snapPoints = ref(props.snapPoints)
 const currentSnapIndex = ref(props.initialSnapPoint ?? 0)
 const isScrollAllowed = ref(false)
 const expandOnContentDrag = ref(props.expandOnContentDrag)
+const snapToPrevOnTop = ref(props.snapToPrevOnTop)
+
+const animationDuration = ref(props.animationDuration)
+const animationDurationSeconds = computed(() => animationDuration.value / 1000)
 
 const minHeight = computed(() => Math.min(...pixelSnapPoints.value))
 const maxHeight = computed(() => Math.max(...pixelSnapPoints.value))
 
 const animatedHeight = computed(() =>
   isDragging.value ? panelHeight.value : targetHeight.value,
+)
+
+const minSnapIndex = computed(() =>
+  pixelSnapPoints.value.indexOf(Math.min(...pixelSnapPoints.value)),
 )
 
 const maxSnapIndex = computed(() =>
@@ -92,6 +103,11 @@ const canScrollDrag = computed(
 watch(
   () => props.expandOnContentDrag,
   newVal => (expandOnContentDrag.value = newVal),
+)
+
+watch(
+  () => props.snapToPrevOnTop,
+  newVal => (snapToPrevOnTop.value = newVal),
 )
 
 watch(
@@ -110,6 +126,11 @@ watch(
     }
   },
   { immediate: true },
+)
+
+watch(
+  () => props.animationDuration,
+  newVal => (animationDuration.value = newVal),
 )
 
 function updatePixelSnapPoints(snapPts: typeof props.snapPoints) {
@@ -134,25 +155,19 @@ function updatePixelSnapPoints(snapPts: typeof props.snapPoints) {
 
 // Drag state and parameters
 let startY = 0
+let lastY = 0
+let lastTime = 0
 let startHeight = 0
-let dragging = false
 let rafId: number | null = null
 let pendingDelta: number | null = null
 
 const smoothFactor = props.smoothFactor!
 const useEasing = true
-const maxOvershootRatio = 1 + props.maxOvershootPercent / 100
-
-// Variable to manage the Promise in open and close methods
-let motionResolveHandler: (() => void) | null = null
-function cleanupMotionHandler() {
-  motionResolveHandler = null
-}
+const maxOvershootRatio = 1 + 0.2
 
 function getValidInitialHeight(): number {
   let initialHeight =
-    pixelSnapPoints.value[props.initialSnapPoint] ??
-    pixelSnapPoints.value[0]
+    pixelSnapPoints.value[props.initialSnapPoint] ?? pixelSnapPoints.value[0]
 
   if (isNaN(initialHeight) || initialHeight <= 0) {
     console.warn(
@@ -174,6 +189,9 @@ onMounted(() => {
 
 async function open() {
   return new Promise<void>(resolve => {
+    if (!hasBeenOpened.value) {
+      hasBeenOpened.value = true
+    }
     show.value = true
     targetHeight.value = '0px'
     emit('open')
@@ -183,30 +201,26 @@ async function open() {
 
       targetHeight.value = `${initialHeight}px`
       currentSnapIndex.value = props.initialSnapPoint
-      motionResolveHandler = resolve
+      resolve()
     })
   })
 }
 
 async function close() {
   return new Promise<void>(resolve => {
+    const currentHeight = parseFloat(panelHeight.value)
+
+    panelHeight.value = `${currentHeight}px`
     targetHeight.value = '0px'
-    motionResolveHandler = resolve
+
+    setTimeout(() => {
+      show.value = false
+      cleanup()
+      emit('close')
+      resolve()
+    }, animationDuration.value)
   })
 }
-
-watch(targetHeight, newHeight => {
-  if (newHeight === '0px') {
-    show.value = false
-    cleanup()
-    emit('close')
-  }
-
-  if (motionResolveHandler) {
-    motionResolveHandler()
-    cleanupMotionHandler()
-  }
-})
 
 function snapToPoint(index: number) {
   if (index < 0 || index >= pixelSnapPoints.value.length) {
@@ -221,19 +235,33 @@ function snapToPoint(index: number) {
   emit('snapChange', index)
 }
 
+function recordDragPos(y: number) {
+  const now = performance.now()
+  lastY = y
+  lastTime = now
+}
+
 const handleDragDecision = (currentClientY: number) => {
   if (!isScrollAllowed.value) return true
 
   if (canScrollDrag.value) return true
+
+  if (!expandOnContentDrag.value && !snapToPrevOnTop.value) return false
 
   const deltaY = startY - currentClientY
   const el = scrollRef.value
   if (!el) return false
 
   const isDraggingDown = deltaY < 0
-  const atTop = el.scrollTop <= 0
+  const isDraggingUp = deltaY > 0
 
-  return isDraggingDown && atTop
+  const atTop = el.scrollTop <= 0
+  const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight
+
+  if (isDraggingDown && atTop) return true
+  if (isDraggingUp && atBottom) return true
+
+  return false
 }
 
 const startDragFromScroll = (e: PointerEvent | TouchEvent) => {
@@ -244,15 +272,16 @@ const startDragFromScroll = (e: PointerEvent | TouchEvent) => {
 const startDrag = (e: PointerEvent | TouchEvent, fromScroll = false) => {
   if (!fromScroll) isScrollAllowed.value = false
 
-  if (isScrollAllowed.value && !expandOnContentDrag.value) return
+  // if (isScrollAllowed.value && !expandOnContentDrag.value) return
 
-  dragging = true
   isDragging.value = true
 
   const isTouch = e.type.startsWith('touch')
   const clientY = isTouch
     ? (e as TouchEvent).touches[0].clientY
     : (e as PointerEvent).clientY
+
+  recordDragPos(clientY)
 
   startY = clientY
   startHeight =
@@ -269,7 +298,7 @@ const startDrag = (e: PointerEvent | TouchEvent, fromScroll = false) => {
 }
 
 const onPointerDrag = (e: PointerEvent) => {
-  if (!dragging) return
+  if (!isDragging.value) return
   if (!handleDragDecision(e.clientY)) return
 
   emit('dragStart')
@@ -285,7 +314,7 @@ const onPointerDrag = (e: PointerEvent) => {
 }
 
 const onTouchDrag = (e: TouchEvent) => {
-  if (!dragging) return
+  if (!isDragging.value) return
   if (!handleDragDecision(e.touches[0].clientY)) return
 
   e.preventDefault()
@@ -309,18 +338,26 @@ const updateHeightSmooth = (rawHeight: number) => {
     if (canSwipeClose.value) {
       newHeight = Math.max(rawHeight, 0)
     } else {
-      const diff = minHeight.value - rawHeight
-      const easedDiff = useEasing ? Math.sqrt(diff) * 5 : diff
-      newHeight = minHeight.value - Math.min(diff, easedDiff)
-      const minAllowedHeight = minHeight.value / maxOvershootRatio
-      if (newHeight < minAllowedHeight) newHeight = minAllowedHeight
+      if (currentSnapIndex.value == 0) {
+        newHeight = minHeight.value
+      } else {
+        const diff = minHeight.value - rawHeight
+        const easedDiff = useEasing ? Math.sqrt(diff) * 5 : diff
+        newHeight = minHeight.value - Math.min(diff, easedDiff)
+        const minAllowedHeight = minHeight.value / maxOvershootRatio
+        if (newHeight < minAllowedHeight) newHeight = minAllowedHeight
+      }
     }
   } else if (rawHeight > maxHeight.value) {
-    const diff = rawHeight - maxHeight.value
-    const easedDiff = useEasing ? Math.sqrt(diff) * 5 : diff
-    newHeight = maxHeight.value + Math.min(diff, easedDiff)
-    const maxAllowedHeight = maxHeight.value * maxOvershootRatio
-    if (newHeight > maxAllowedHeight) newHeight = maxAllowedHeight
+    if (currentSnapIndex.value >= maxSnapIndex.value) {
+      newHeight = maxHeight.value
+    } else {
+      const diff = rawHeight - maxHeight.value
+      const easedDiff = useEasing ? Math.sqrt(diff) * 5 : diff
+      newHeight = maxHeight.value + Math.min(diff, easedDiff)
+      const maxAllowedHeight = maxHeight.value * maxOvershootRatio
+      if (newHeight > maxAllowedHeight) newHeight = maxAllowedHeight
+    }
   }
 
   const current = parseFloat(panelHeight.value)
@@ -329,45 +366,65 @@ const updateHeightSmooth = (rawHeight: number) => {
 }
 
 const endDrag = () => {
-  dragging = false
   isDragging.value = false
 
-  const currentHeight = parseFloat(panelHeight.value)
-  const vh = window.innerHeight
+  if (rafId) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
 
-  if (canSwipeClose.value && currentHeight < vh * 0.1) {
-    emit('dragEnd', currentSnapIndex.value)
+  const currentHeight = parseFloat(panelHeight.value)
+  const currIndex = currentSnapIndex.value
+  const currSnapHeight = pixelSnapPoints.value[currIndex]
+
+  const minSnapHeightVal = Math.min(...pixelSnapPoints.value)
+  const minIndex = pixelSnapPoints.value.indexOf(minSnapHeightVal)
+
+  // محاسبه سرعت
+  const dy = lastY - startY
+  const dt = Math.max(performance.now() - lastTime, 1) // جلوگیری از تقسیم بر صفر
+  const velocity = (dy / dt) * 1000 // px/s
+
+  const fastDownThreshold = 1500 // پرتاب سریع به پایین (px/s)
+  const fastUpThreshold = -1500 // پرتاب سریع به بالا (px/s)
+
+  // بررسی بستن سریع
+  const pulledDownPx = Math.max(0, currSnapHeight - currentHeight)
+  const closeThresholdPx = currSnapHeight * 0.2
+
+  if (
+    (canSwipeClose.value && pulledDownPx >= closeThresholdPx) ||
+    velocity > fastDownThreshold
+  ) {
     close()
+    emit('dragEnd', currIndex)
     cleanup()
     return
   }
 
-  const clampedHeight = Math.min(
-    maxHeight.value,
-    Math.max(minHeight.value, currentHeight),
-  )
+  // تعیین اسنپ بعدی
+  let targetIndex = currIndex
 
-  let closestIndex = 0
-  let closest = pixelSnapPoints.value[0]
-  let minDiff = Math.abs(clampedHeight - closest)
+  const delta = currentHeight - currSnapHeight
 
-  for (let i = 1; i < pixelSnapPoints.value.length; i++) {
-    const p = pixelSnapPoints.value[i]
-    const diff = Math.abs(clampedHeight - p)
-    if (diff < minDiff) {
-      closest = p
-      minDiff = diff
-      closestIndex = i
-    }
+  if (delta > 5 || velocity < fastUpThreshold) {
+    // درگ به سمت بالا (افزایش ارتفاع)
+    targetIndex = Math.min(currIndex + 1, pixelSnapPoints.value.length - 1)
+  } else if (delta < -5 || velocity > fastDownThreshold) {
+    // درگ به سمت پایین (کاهش ارتفاع)
+    targetIndex = Math.max(currIndex - 1, minIndex)
+  } else {
+    targetIndex = currIndex
   }
 
-  targetHeight.value = `${closest}px`
-  panelHeight.value = `${closest}px`
-  currentSnapIndex.value = closestIndex
+  // اعمال اسنپ
+  const snapHeight = pixelSnapPoints.value[targetIndex]
+  panelHeight.value = `${snapHeight}px`
+  targetHeight.value = `${snapHeight}px`
+  currentSnapIndex.value = targetIndex
 
   cleanup()
-
-  emit('dragEnd', currentSnapIndex.value)
+  emit('dragEnd', targetIndex)
 }
 
 const cleanup = () => {
@@ -383,7 +440,8 @@ defineExpose({ open, close, snapToPoint, isOpened: computed(() => show.value) })
 <template>
   <teleport :to="teleportTo">
     <div
-      v-if="show"
+      v-if="show || hasBeenOpened"
+      v-show="show"
       class="ba-bs-container"
       :data-theme="darkMode ? 'dark' : undefined"
       data-ba-container
@@ -402,17 +460,16 @@ defineExpose({ open, close, snapToPoint, isOpened: computed(() => show.value) })
         :class="containerClass"
         :style="{ height: maxHeight + 'px', willChange: 'height' }"
         tabindex="-1"
-        :initial="{ height: '0px' }"
-        :animate="{ height: animatedHeight }"
-        :exit="{ height: '0px' }"
+        :initial="{ height: '0px', opacity: 0 }"
+        :animate="{ height: animatedHeight, opacity: 1 }"
+        :exit="{ height: '0px', opacity: 0 }"
         :transition="
           isDragging
-            ? { type: 'linear', duration: 0.05 }
+            ? { type: 'linear', duration: 0 }
             : {
-                type: 'spring',
-                stiffness: props.springStiffness,
-                damping: props.springDamping,
-                mass: 1,
+                type: 'tween',
+                ease: 'easeOut',
+                duration: animationDurationSeconds,
               }
         "
         data-ba-sheet

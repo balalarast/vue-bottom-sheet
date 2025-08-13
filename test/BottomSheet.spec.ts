@@ -1,6 +1,5 @@
 import { mount } from '@vue/test-utils'
 import { describe, it, expect, vi } from 'vitest'
-import { nextTick } from 'vue'
 import BottomSheet from '../src/components/BottomSheet.vue'
 
 describe('BottomSheet', () => {
@@ -13,9 +12,8 @@ describe('BottomSheet', () => {
       })
   
       await wrapper.vm.open()
-      await wrapper.vm.$nextTick()
   
-      expect(wrapper.find('.ba-bs-container').exists()).toBe(true)
+      expect(wrapper.find('.ba-bs-container').isVisible()).toBe(true)
       expect(wrapper.vm.isOpened).toBe(true)
     })
     
@@ -25,13 +23,13 @@ describe('BottomSheet', () => {
       })
   
       await wrapper.vm.open()
-      await wrapper.vm.$nextTick()
-      expect(wrapper.find('.ba-bs-container').exists()).toBe(true)
+      
+      expect(wrapper.find('.ba-bs-container').isVisible()).toBe(true)
       expect(wrapper.vm.isOpened).toBe(true)
   
       await wrapper.vm.close()
-      await wrapper.vm.$nextTick()
-      expect(wrapper.find('.ba-bs-container').exists()).toBe(false)
+
+      expect(wrapper.find('.ba-bs-container').isVisible()).toBe(false)
       expect(wrapper.vm.isOpened).toBe(false)
     })
 
@@ -42,14 +40,16 @@ describe('BottomSheet', () => {
       })
       
       await wrapper.vm.open()
-      await wrapper.vm.$nextTick()
   
       const overlay = wrapper.find('.ba-bs-overlay')
       expect(overlay.exists()).toBe(true)
   
       await overlay.trigger('click')
+
+      const vm = wrapper.vm as any
+      await new Promise(resolve => setTimeout(resolve, vm.animationDuration))
   
-      expect(wrapper.find('.ba-bs-container').exists()).toBe(false)
+      expect(wrapper.find('.ba-bs-container').isVisible()).toBe(false)
     })
 
     it('does not render overlay if overlay prop is false', async () => {
@@ -57,6 +57,7 @@ describe('BottomSheet', () => {
         global: { stubs: { teleport: true } },
         props: { overlay: false },
       })
+
       await wrapper.vm.open()
     
       expect(wrapper.find('.ba-bs-overlay').exists()).toBe(false)
@@ -67,6 +68,7 @@ describe('BottomSheet', () => {
         props: { overlay: true },
         global: { stubs: { teleport: true } }
       })
+
       await wrapper.vm.open()
     
       expect(wrapper.find('.ba-bs-overlay').exists()).toBe(true)
@@ -78,7 +80,6 @@ describe('BottomSheet', () => {
       })
     
       await wrapper.vm.open()
-      await wrapper.vm.$nextTick()
     
       expect(wrapper.emitted('open')).toBeTruthy()
     })
@@ -90,7 +91,6 @@ describe('BottomSheet', () => {
     
       await wrapper.vm.open()
       await wrapper.vm.close()
-      await wrapper.vm.$nextTick()
     
       expect(wrapper.emitted('close')).toBeTruthy()
     })
@@ -119,6 +119,7 @@ describe('BottomSheet', () => {
       const wrapper = mount(BottomSheet, {
         global: { stubs: { teleport: true } },
       })
+      
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     
       wrapper.vm.snapToPoint(-1)
@@ -133,6 +134,7 @@ describe('BottomSheet', () => {
         global: { stubs: { teleport: true } },
         props: { snapPoints: ['40%', '80%'] },
       })
+
       await wrapper.vm.open()
     
       const vm = wrapper.vm as any
@@ -151,7 +153,9 @@ describe('BottomSheet', () => {
       })
     
       await wrapper.vm.open()
+
       wrapper.vm.snapToPoint(1)
+
       await wrapper.vm.$nextTick()
     
       expect(wrapper.emitted('snapChange')).toBeTruthy()
@@ -165,6 +169,7 @@ describe('BottomSheet', () => {
       const wrapper = mount(BottomSheet, {
         global: { stubs: { teleport: true } },
       })
+
       await wrapper.vm.open()
     
       const vm = wrapper.vm as any
@@ -177,6 +182,7 @@ describe('BottomSheet', () => {
       const wrapper = mount(BottomSheet, {
         global: { stubs: { teleport: true } },
       })
+
       await wrapper.vm.open()
     
       const vm = wrapper.vm as any
@@ -198,7 +204,9 @@ describe('BottomSheet', () => {
         global: { stubs: { teleport: true } },
         props: { canSwipeClose: false },
       })
+
       await wrapper.vm.open()
+
       const vm = wrapper.vm as any
     
       vm.startDrag(new PointerEvent('pointerdown'))
@@ -215,7 +223,9 @@ describe('BottomSheet', () => {
         global: { stubs: { teleport: true } },
         props: { expandOnContentDrag: true },
       })
+
       await wrapper.vm.open()
+
       const vm = wrapper.vm as any
     
       vm.startDragFromScroll(new PointerEvent('pointerdown'))
@@ -232,11 +242,11 @@ describe('BottomSheet', () => {
       const vm = wrapper.vm as any
     
       vm.startDrag(new PointerEvent('pointerdown'))
-      window.dispatchEvent(new PointerEvent('pointermove', { clientY: 100 }))
+      window.dispatchEvent(new PointerEvent('pointermove'))
       
       expect(wrapper.emitted('dragStart')).toBeTruthy()
     
-      vm.panelHeight = '50px'
+      vm.panelHeight = '130px'
       vm.endDrag()
       await wrapper.vm.$nextTick()
     
@@ -256,6 +266,7 @@ describe('BottomSheet', () => {
           default: '<div class="test-content">Content</div>',
         },
       })
+
       await wrapper.vm.open()
     
       expect(wrapper.find('.test-header').exists()).toBe(true)
@@ -268,8 +279,8 @@ describe('BottomSheet', () => {
         global: { stubs: { teleport: true } },
         props: { darkMode: true },
       })
+
       await wrapper.vm.open()
-      await wrapper.vm.$nextTick()
     
       const container = wrapper.find('.ba-bs-container')
       expect(container.attributes('data-theme')).toBe('dark')
@@ -280,8 +291,8 @@ describe('BottomSheet', () => {
         global: { stubs: { teleport: true } },
         props: { preventPullToRefresh: true },
       })
+
       await wrapper.vm.open()
-      await wrapper.vm.$nextTick()
     
       const scroll = wrapper.find('.ba-bs-scroll')
       expect(scroll.classes()).toContain('ba-bs-scroll--no-pull')
@@ -292,8 +303,8 @@ describe('BottomSheet', () => {
         global: { stubs: { teleport: true } },
         props: { hideScrollbar: true },
       })
+
       await wrapper.vm.open()
-      await wrapper.vm.$nextTick()
     
       const scroll = wrapper.find('.ba-bs-scroll')
       expect(scroll.classes()).toContain('ba-bs-scroll--hidden')
@@ -304,10 +315,7 @@ describe('BottomSheet', () => {
         attachTo: document.body
       })
     
-      wrapper.vm.open()
-      
-      await nextTick()
-      await new Promise(resolve => setTimeout(resolve, 20))
+      await wrapper.vm.open()
     
       const sheet = document.querySelector<HTMLElement>('.ba-bs-sheet')
       expect(sheet).not.toBeNull()
