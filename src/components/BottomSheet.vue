@@ -208,9 +208,6 @@ async function open() {
 
 async function close() {
   return new Promise<void>(resolve => {
-    const currentHeight = parseFloat(panelHeight.value)
-
-    panelHeight.value = `${currentHeight}px`
     targetHeight.value = '0px'
 
     setTimeout(() => {
@@ -418,9 +415,7 @@ const endDrag = () => {
   }
 
   // اعمال اسنپ
-  const snapHeight = pixelSnapPoints.value[targetIndex]
-  panelHeight.value = `${snapHeight}px`
-  targetHeight.value = `${snapHeight}px`
+  targetHeight.value = `${pixelSnapPoints.value[targetIndex]}px`
   currentSnapIndex.value = targetIndex
 
   cleanup()
