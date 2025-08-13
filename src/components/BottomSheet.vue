@@ -374,9 +374,6 @@ const endDrag = () => {
   const currIndex = currentSnapIndex.value
   const currSnapHeight = pixelSnapPoints.value[currIndex]
 
-  const minSnapHeightVal = Math.min(...pixelSnapPoints.value)
-  const minIndex = pixelSnapPoints.value.indexOf(minSnapHeightVal)
-
   // محاسبه سرعت
   const dy = lastY - startY
   const dt = Math.max(performance.now() - lastTime, 1) // جلوگیری از تقسیم بر صفر
@@ -409,7 +406,7 @@ const endDrag = () => {
     targetIndex = Math.min(currIndex + 1, pixelSnapPoints.value.length - 1)
   } else if (delta < -5 || velocity > fastDownThreshold) {
     // درگ به سمت پایین (کاهش ارتفاع)
-    targetIndex = Math.max(currIndex - 1, minIndex)
+    targetIndex = Math.max(currIndex - 1, minSnapIndex.value)
   } else {
     targetIndex = currIndex
   }
