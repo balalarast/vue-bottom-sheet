@@ -101,10 +101,8 @@ export default defineNuxtConfig({
 | `preventPullToRefresh`| `boolean`                  | `true`                 | Prevents pull-to-refresh on mobile devices  |
 | `expandOnContentDrag`| `boolean`                   | `false`                | Allows height expansion when dragging content|
 | `snapToPrevOnTop`   | `boolean`                    | `false`                | Moves to the previous snap point when dragging from the top of scrollable content **only if** `expandOnContentDrag` is `false` |
-| `maxOvershootPercent`| `20 \| 40 \| 60 \| 80 \| 100`| `100`                 | Max overshoot percentage beyond snap points |
 | `smoothFactor`      | `number`                     | `0.7`                  | Smoothing factor for height animation       |
-| `springStiffness`   | `number`                     | `300`                  | Spring animation stiffness                   |
-| `springDamping`     | `number`                     | `30`                   | Spring animation damping                      |
+| `animationDuration` | `number`                     | `150`                  | Duration of the open/close animation in milliseconds (ms) |
 
 ## Exposed Methods & Properties
 
