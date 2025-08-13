@@ -58,7 +58,7 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'snapChange', index: number): void
   (e: 'dragStart'): void
-  (e: 'dragEnd', finalIndex: number | null): void
+  (e: 'dragEnd', finalIndex: number): void
 }>()
 
 const show = ref(false)
