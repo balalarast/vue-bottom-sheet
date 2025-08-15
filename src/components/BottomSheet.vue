@@ -6,7 +6,6 @@ import {
   nextTick,
   onMounted,
   ref,
-  watch,
 } from 'vue'
 
 const props = withDefaults(
@@ -25,9 +24,11 @@ const props = withDefaults(
      * Moves panel to previous snap point when dragging from top of content,
      * only works if expandOnContentDrag is false
      */
-    snapToPrevOnTop?: boolean
+    edgeScrollSnap?: boolean
+    disableEdgeBounce?: boolean
     smoothFactor?: number
     animationDuration?: number
+    allowFastClose?: boolean
   }>(),
   {
     darkMode: false,
@@ -40,9 +41,11 @@ const props = withDefaults(
     hideScrollbar: false,
     preventPullToRefresh: true,
     expandOnContentDrag: false,
-    snapToPrevOnTop: false,
+    edgeScrollSnap: true,
+    disableEdgeBounce: false,
     smoothFactor: 0.7,
     animationDuration: 150,
+    allowFastClose: false,
   },
 )
 
@@ -68,17 +71,46 @@ const sheetRef = ref<ComponentPublicInstance | null>(null)
 const scrollRef = ref<HTMLElement | null>(null)
 const panelHeight = ref('0px')
 const targetHeight = ref('0px')
-const pixelSnapPoints = ref<number[]>([])
 const isDragging = ref(false)
-const canSwipeClose = ref(props.canSwipeClose)
-const snapPoints = ref(props.snapPoints)
-const initialSnapPoint = ref(props.initialSnapPoint)
+
+const pixelSnapPoints = computed<number[]>(() => {
+  const vh = window.innerHeight
+  let val = props.snapPoints
+    .map(p => {
+      let val = 0
+      if (typeof p === 'string' && p.endsWith('%')) {
+        val = (parseFloat(p) / 100) * vh
+      } else if (typeof p === 'number') {
+        val = p
+      }
+      val = Number(val.toFixed(2))
+      if (isNaN(val) || val <= 0) {
+        console.warn(`Invalid snap point value detected: ${p}. Ignored.`)
+        return null
+      }
+      return val
+    })
+    .filter((v): v is number => v !== null)
+
+  if (val.length === 0) {
+    val = [100]
+    console.warn('pixelSnapPoints was empty after update, set default 100px')
+  }
+
+  return val
+})
+const canSwipeClose = computed(() => props.canSwipeClose)
+const initialSnapPoint = computed(() => props.initialSnapPoint)
+
 const currentSnapIndex = ref(initialSnapPoint.value)
 const isScrollAllowed = ref(false)
-const expandOnContentDrag = ref(props.expandOnContentDrag)
-const snapToPrevOnTop = ref(props.snapToPrevOnTop)
 
-const animationDuration = ref(props.animationDuration)
+const expandOnContentDrag = computed(() => props.expandOnContentDrag)
+const edgeScrollSnap = computed(() => props.edgeScrollSnap)
+const disableEdgeBounce = computed(() => props.disableEdgeBounce)
+const smoothFactor = computed(() => props.smoothFactor)
+
+const animationDuration = computed(() => props.animationDuration)
 const animationDurationSeconds = computed(() => animationDuration.value / 1000)
 
 const minHeight = computed(() => Math.min(...pixelSnapPoints.value))
@@ -101,73 +133,15 @@ const canScrollDrag = computed(
     expandOnContentDrag.value && currentSnapIndex.value < maxSnapIndex.value,
 )
 
-watch(
-  () => props.initialSnapPoint,
-  newVal => (initialSnapPoint.value = newVal),
-)
-
-watch(
-  () => props.expandOnContentDrag,
-  newVal => (expandOnContentDrag.value = newVal),
-)
-
-watch(
-  () => props.snapToPrevOnTop,
-  newVal => (snapToPrevOnTop.value = newVal),
-)
-
-watch(
-  () => props.canSwipeClose,
-  newVal => (canSwipeClose.value = newVal),
-)
-
-watch(
-  () => props.snapPoints,
-  newVal => {
-    snapPoints.value = newVal
-    updatePixelSnapPoints(newVal)
-    if (pixelSnapPoints.value.length === 0) {
-      pixelSnapPoints.value = [100]
-      console.warn('pixelSnapPoints was empty after update, set default 100px')
-    }
-  },
-  { immediate: true },
-)
-
-watch(
-  () => props.animationDuration,
-  newVal => (animationDuration.value = newVal),
-)
-
-function updatePixelSnapPoints(snapPts: typeof props.snapPoints) {
-  const vh = window.innerHeight
-  pixelSnapPoints.value = snapPts
-    .map(p => {
-      let val = 0
-      if (typeof p === 'string' && p.endsWith('%')) {
-        val = (parseFloat(p) / 100) * vh
-      } else if (typeof p === 'number') {
-        val = p
-      }
-      val = Number(val.toFixed(2))
-      if (isNaN(val) || val <= 0) {
-        console.warn(`Invalid snap point value detected: ${p}. Ignored.`)
-        return null
-      }
-      return val
-    })
-    .filter((v): v is number => v !== null)
-}
-
 // Drag state and parameters
 let startY = 0
 let lastY = 0
 let lastTime = 0
+let velocity = 0
 let startHeight = 0
 let rafId: number | null = null
 let pendingDelta: number | null = null
 
-const smoothFactor = props.smoothFactor!
 const useEasing = true
 const maxOvershootRatio = 1 + 0.2
 
@@ -238,8 +212,19 @@ function snapToPoint(index: number) {
   emit('snapChange', index)
 }
 
-function recordDragPos(y: number) {
+function recordDragPos(y: number, resetVelocity: boolean = false) {
+  if (resetVelocity) {
+    velocity = 0
+  }
+
   const now = performance.now()
+  const dy = y - lastY
+  const dt = now - lastTime
+
+  if (dt > 0) {
+    velocity = (dy / dt) * 1000 // px/s
+  }
+
   lastY = y
   lastTime = now
 }
@@ -249,7 +234,7 @@ const handleDragDecision = (currentClientY: number) => {
 
   if (canScrollDrag.value) return true
 
-  if (!expandOnContentDrag.value && !snapToPrevOnTop.value) return false
+  if (!expandOnContentDrag.value && !edgeScrollSnap.value) return false
 
   const deltaY = startY - currentClientY
   const el = scrollRef.value
@@ -284,7 +269,7 @@ const startDrag = (e: PointerEvent | TouchEvent, fromScroll = false) => {
     ? (e as TouchEvent).touches[0].clientY
     : (e as PointerEvent).clientY
 
-  recordDragPos(clientY)
+  recordDragPos(clientY, true)
 
   startY = clientY
   startHeight =
@@ -301,6 +286,8 @@ const startDrag = (e: PointerEvent | TouchEvent, fromScroll = false) => {
 }
 
 const onPointerDrag = (e: PointerEvent) => {
+  recordDragPos(e.clientY)
+
   if (!isDragging.value) return
   if (!handleDragDecision(e.clientY)) return
 
@@ -317,6 +304,8 @@ const onPointerDrag = (e: PointerEvent) => {
 }
 
 const onTouchDrag = (e: TouchEvent) => {
+  recordDragPos(e.touches[0].clientY)
+
   if (!isDragging.value) return
   if (!handleDragDecision(e.touches[0].clientY)) return
 
@@ -341,7 +330,7 @@ const updateHeightSmooth = (rawHeight: number) => {
     if (canSwipeClose.value) {
       newHeight = Math.max(rawHeight, 0)
     } else {
-      if (currentSnapIndex.value == 0) {
+      if (currentSnapIndex.value == 0 && disableEdgeBounce.value) {
         newHeight = minHeight.value
       } else {
         const diff = minHeight.value - rawHeight
@@ -352,7 +341,10 @@ const updateHeightSmooth = (rawHeight: number) => {
       }
     }
   } else if (rawHeight > maxHeight.value) {
-    if (currentSnapIndex.value >= maxSnapIndex.value) {
+    if (
+      currentSnapIndex.value >= maxSnapIndex.value &&
+      disableEdgeBounce.value
+    ) {
       newHeight = maxHeight.value
     } else {
       const diff = rawHeight - maxHeight.value
@@ -364,7 +356,8 @@ const updateHeightSmooth = (rawHeight: number) => {
   }
 
   const current = parseFloat(panelHeight.value)
-  const smoothed = current * (1 - smoothFactor) + newHeight * smoothFactor
+  const smoothed =
+    current * (1 - smoothFactor.value) + newHeight * smoothFactor.value
   panelHeight.value = `${smoothed}px`
 }
 
@@ -380,22 +373,22 @@ const endDrag = () => {
   const currIndex = currentSnapIndex.value
   const currSnapHeight = pixelSnapPoints.value[currIndex]
 
-  // محاسبه سرعت
-  const dy = lastY - startY
-  const dt = Math.max(performance.now() - lastTime, 1) // جلوگیری از تقسیم بر صفر
-  const velocity = (dy / dt) * 1000 // px/s
+  // velocity thresholds پویا بر اساس ارتفاع اسنپ
+  const baseFactor = 10 // قابل تنظیم برای حساسیت پرتاب
+  const minVelocity = 800 // حداقل سرعت برای پرتاب سریع
+  const maxVelocity = 2000 // حداکثر سرعت برای اسنپ‌های خیلی بزرگ
 
-  const fastDownThreshold = 1500 // پرتاب سریع به پایین (px/s)
-  const fastUpThreshold = -1500 // پرتاب سریع به بالا (px/s)
+  const fastDownThreshold = Math.min(
+    maxVelocity,
+    Math.max(minVelocity, currSnapHeight * baseFactor),
+  )
+  const fastUpThreshold = -fastDownThreshold
 
   // بررسی بستن سریع
   const pulledDownPx = Math.max(0, currSnapHeight - currentHeight)
   const closeThresholdPx = currSnapHeight * 0.2
 
-  if (
-    (canSwipeClose.value && pulledDownPx >= closeThresholdPx) ||
-    velocity > fastDownThreshold
-  ) {
+  if (canSwipeClose.value && pulledDownPx >= closeThresholdPx) {
     close()
     emit('dragEnd', currIndex)
     cleanup()

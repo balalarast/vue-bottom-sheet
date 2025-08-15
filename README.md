@@ -88,21 +88,23 @@ export default defineNuxtConfig({
 ```
 
 ## Props and Configuration
-| Prop Name           | Type                         | Default                | Description                                  |
-|---------------------|------------------------------|------------------------|----------------------------------------------|
-| `darkMode`          | `boolean`                    | `false`                | Enables dark mode                            |
-| `canSwipeClose`     | `boolean`                    | `true`                 | Allows closing the sheet by swiping down    |
-| `snapPoints`        | `Array<number \| string>`    | `[200, '60%', '90%']`  | Snap points as percentage or pixels         |
-| `initialSnapPoint`  | `number`                     | `0`                    | Initial snap point index                     |
-| `overlay`           | `boolean`                    | `false`                | Shows a dark overlay behind the sheet       |
-| `teleportTo`        | `string`                     | `'body'`               | Element selector for teleport rendering     |
-| `containerClass`    | `string`                     | `''`                   | Additional class for the container           |
-| `hideScrollbar`     | `boolean`                    | `false`                | Hides the scrollbar                          |
-| `preventPullToRefresh`| `boolean`                  | `true`                 | Prevents pull-to-refresh on mobile devices  |
-| `expandOnContentDrag`| `boolean`                   | `false`                | Allows height expansion when dragging content|
-| `snapToPrevOnTop`   | `boolean`                    | `false`                | Moves to the previous snap point when dragging from the top of scrollable content **only if** `expandOnContentDrag` is `false` |
-| `smoothFactor`      | `number`                     | `0.7`                  | Smoothing factor for height animation       |
-| `animationDuration` | `number`                     | `150`                  | Duration of the open/close animation in milliseconds (ms) |
+| Prop Name              | Type                         | Default                | Description |
+|------------------------|------------------------------|------------------------|-------------|
+| `darkMode`             | `boolean`                    | `false`                | Enables dark mode. |
+| `canSwipeClose`        | `boolean`                    | `true`                 | Allows closing the sheet by swiping down. |
+| `snapPoints`           | `Array<number \| string>`    | `[200, '60%', '90%']`  | Snap points as percentages or pixels. |
+| `initialSnapPoint`     | `number`                     | `0`                    | Initial snap point index. |
+| `overlay`              | `boolean`                    | `false`                | Shows a dark overlay behind the sheet. |
+| `teleportTo`           | `string`                     | `'body'`               | Element selector for teleport rendering. |
+| `containerClass`       | `string`                     | `''`                   | Additional class for the container. |
+| `hideScrollbar`        | `boolean`                    | `false`                | Hides the scrollbar. |
+| `preventPullToRefresh` | `boolean`                    | `true`                 | Prevents pull-to-refresh on mobile devices. |
+| `expandOnContentDrag`  | `boolean`                    | `false`                | Allows height expansion when dragging the content. |
+| `edgeScrollSnap`       | `boolean`                    | `true`                 | Allows snapping to the next/previous snap point when the scrollable content is at the top or bottom **only if** `expandOnContentDrag` is `false`. |
+| `disableEdgeBounce`    | `boolean`                    | `false`                | Disables bounce effect at edges when dragging beyond limits. |
+| `smoothFactor`         | `number`                     | `0.7`                  | Smoothing factor for height animation. |
+| `animationDuration`    | `number`                     | `150`                  | Duration of the open/close animation in milliseconds (ms). |
+| `allowFastClose`       | `boolean`                    | `false`                | Enables quick close when swiping down fast. |
 
 ## Exposed Methods & Properties
 
