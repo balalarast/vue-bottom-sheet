@@ -86,25 +86,29 @@ export default defineNuxtConfig({
   ],
 })
 ```
-
 ## Props and Configuration
-| Prop Name              | Type                         | Default                | Description |
-|------------------------|------------------------------|------------------------|-------------|
-| `darkMode`             | `boolean`                    | `false`                | Enables dark mode. |
-| `canSwipeClose`        | `boolean`                    | `true`                 | Allows closing the sheet by swiping down. |
-| `snapPoints`           | `Array<number \| string>`    | `[200, '60%', '90%']`  | Snap points as percentages or pixels. |
-| `initialSnapPoint`     | `number`                     | `0`                    | Initial snap point index. |
-| `overlay`              | `boolean`                    | `false`                | Shows a dark overlay behind the sheet. |
-| `teleportTo`           | `string`                     | `'body'`               | Element selector for teleport rendering. |
-| `containerClass`       | `string`                     | `''`                   | Additional class for the container. |
-| `hideScrollbar`        | `boolean`                    | `false`                | Hides the scrollbar. |
-| `preventPullToRefresh` | `boolean`                    | `true`                 | Prevents pull-to-refresh on mobile devices. |
-| `expandOnContentDrag`  | `boolean`                    | `false`                | Allows height expansion when dragging the content. |
-| `edgeScrollSnap`       | `boolean`                    | `true`                 | Allows snapping to the next/previous snap point when the scrollable content is at the top or bottom **only if** `expandOnContentDrag` is `false`. |
-| `disableEdgeBounce`    | `boolean`                    | `false`                | Disables bounce effect at edges when dragging beyond limits. |
-| `smoothFactor`         | `number`                     | `0.7`                  | Smoothing factor for height animation. |
-| `animationDuration`    | `number`                     | `150`                  | Duration of the open/close animation in milliseconds (ms). |
-| `allowFastClose`       | `boolean`                    | `false`                | Enables quick close when swiping down fast. |
+| Prop Name                 | Type                         | Default                | Description |
+|----------------------------|------------------------------|------------------------|-------------|
+| `darkMode`                | `boolean`                    | `false`                | Enables dark mode styling. |
+| `canSwipeClose`           | `boolean`                    | `true`                 | Allows closing the sheet by swiping down. |
+| `snapPoints`              | `Array<number \| string>`    | `[200, '60%', '90%']`  | Snap points as percentages or pixel values. |
+| `initialSnapPoint`        | `number`                     | `0`                    | Initial snap point index. |
+| `overlay`                 | `boolean`                    | `false`                | Shows a dark overlay behind the sheet. |
+| `teleportTo`              | `string`                     | `'body'`               | Element selector for teleport rendering. |
+| `containerClass`          | `string`                     | `''`                   | Additional CSS class for the sheet container. |
+| `hideScrollbar`           | `boolean`                    | `false`                | Hides the scrollbar inside the sheet. |
+| `preventPullToRefresh`    | `boolean`                    | `true`                 | Prevents pull-to-refresh on mobile devices. |
+| `expandOnContentDrag`     | `boolean`                    | `false`                | Allows the sheet to expand when dragging content. |
+| `edgeScrollSnap`          | `boolean`                    | `true`                 | Enables snapping to next/previous snap point when scrollable content is at top or bottom (works only if `expandOnContentDrag` is `false`). |
+| `disableEdgeBounce`       | `boolean`                    | `false`                | Disables bounce effect at edges when dragging beyond min/max limits. |
+| `smoothFactor`            | `number`                     | `0.7`                  | Smoothing factor for height animation. |
+| `animationDuration`       | `number`                     | `150`                  | Duration of open/close animation in milliseconds. |
+| `fastSwipeThreshold`      | `number`                     | `200`                  | Minimum velocity (px/s) to trigger a fast swipe. |
+| `closeAbsNear`            | `number`                     | `24`                   | If sheet height is very close to zero, it will close. |
+| `closeBelowMin`           | `number`                     | `56`                   | If sheet is dragged below the minimum snap point by this value, it will close. |
+| `closeVelocityThreshold`  | `number`                     | `1500`                 | Velocity threshold for fast swipe close. |
+| `closeVelocityGrace`      | `number`                     | `40`                   | Additional allowance for fast swipe close. |
+| `closeRelativeThreshold`  | `number`                     | `0.2`                  | Relative distance threshold for fast swipe close (percentage of snap distance). |
 
 ## Exposed Methods & Properties
 

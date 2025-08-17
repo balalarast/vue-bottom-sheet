@@ -28,7 +28,12 @@ const props = withDefaults(
     disableEdgeBounce?: boolean
     smoothFactor?: number
     animationDuration?: number
-    allowFastClose?: boolean
+    fastSwipeThreshold?: number
+    closeAbsNear?: number // خیلی نزدیک صفر → fast close
+    closeBelowMin?: number // کشیده شدن زیر پایین‌ترین snap
+    closeVelocityThreshold?: number // آستانه سرعت برای fast close
+    closeVelocityGrace?: number // ارفاق سرعت
+    closeRelativeThreshold?: number // درصد فاصله برای فلینگ سریع
   }>(),
   {
     darkMode: false,
@@ -45,7 +50,12 @@ const props = withDefaults(
     disableEdgeBounce: false,
     smoothFactor: 0.7,
     animationDuration: 150,
-    allowFastClose: false,
+    fastSwipeThreshold: 200,
+    closeAbsNear: 24,
+    closeBelowMin: 56,
+    closeVelocityThreshold: 1500,
+    closeVelocityGrace: 40,
+    closeRelativeThreshold: 0.2,
   },
 )
 
@@ -113,6 +123,14 @@ const smoothFactor = computed(() => props.smoothFactor)
 const animationDuration = computed(() => props.animationDuration)
 const animationDurationSeconds = computed(() => animationDuration.value / 1000)
 
+const fastSwipeThreshold = computed(() => props.fastSwipeThreshold)
+
+const closeAbsNear = computed(() => props.closeAbsNear)
+const closeBelowMin = computed(() => props.closeBelowMin)
+const closeVelocityThreshold = computed(() => props.closeVelocityThreshold)
+const closeVelocityGrace = computed(() => props.closeVelocityGrace)
+const closeRelativeThreshold = computed(() => props.closeRelativeThreshold)
+
 const minHeight = computed(() => Math.min(...pixelSnapPoints.value))
 const maxHeight = computed(() => Math.max(...pixelSnapPoints.value))
 
@@ -136,6 +154,7 @@ const canScrollDrag = computed(
 // Drag state and parameters
 let startY = 0
 let lastY = 0
+let deltaY = 0
 let lastTime = 0
 let velocity = 0
 let startHeight = 0
@@ -214,12 +233,14 @@ function snapToPoint(index: number) {
 
 function recordDragPos(y: number, resetVelocity: boolean = false) {
   if (resetVelocity) {
+    deltaY = 0
     velocity = 0
   }
 
   const now = performance.now()
   const dy = y - lastY
   const dt = now - lastTime
+  deltaY = startY - y
 
   if (dt > 0) {
     velocity = (dy / dt) * 1000 // px/s
@@ -229,14 +250,13 @@ function recordDragPos(y: number, resetVelocity: boolean = false) {
   lastTime = now
 }
 
-const handleDragDecision = (currentClientY: number) => {
+const handleDragDecision = () => {
   if (!isScrollAllowed.value) return true
 
   if (canScrollDrag.value) return true
 
   if (!expandOnContentDrag.value && !edgeScrollSnap.value) return false
 
-  const deltaY = startY - currentClientY
   const el = scrollRef.value
   if (!el) return false
 
@@ -259,8 +279,6 @@ const startDragFromScroll = (e: PointerEvent | TouchEvent) => {
 
 const startDrag = (e: PointerEvent | TouchEvent, fromScroll = false) => {
   if (!fromScroll) isScrollAllowed.value = false
-
-  // if (isScrollAllowed.value && !expandOnContentDrag.value) return
 
   isDragging.value = true
 
@@ -289,7 +307,7 @@ const onPointerDrag = (e: PointerEvent) => {
   recordDragPos(e.clientY)
 
   if (!isDragging.value) return
-  if (!handleDragDecision(e.clientY)) return
+  if (!handleDragDecision()) return
 
   emit('dragStart')
 
@@ -307,7 +325,7 @@ const onTouchDrag = (e: TouchEvent) => {
   recordDragPos(e.touches[0].clientY)
 
   if (!isDragging.value) return
-  if (!handleDragDecision(e.touches[0].clientY)) return
+  if (!handleDragDecision()) return
 
   e.preventDefault()
 
@@ -323,6 +341,12 @@ const onTouchDrag = (e: TouchEvent) => {
   }
 }
 
+function clampHeight(height: number) {
+  const minAllowedHeight = minHeight.value / maxOvershootRatio
+  const maxAllowedHeight = maxHeight.value * maxOvershootRatio
+  return Math.min(Math.max(height, minAllowedHeight), maxAllowedHeight)
+}
+
 const updateHeightSmooth = (rawHeight: number) => {
   let newHeight = rawHeight
 
@@ -336,8 +360,7 @@ const updateHeightSmooth = (rawHeight: number) => {
         const diff = minHeight.value - rawHeight
         const easedDiff = useEasing ? Math.sqrt(diff) * 5 : diff
         newHeight = minHeight.value - Math.min(diff, easedDiff)
-        const minAllowedHeight = minHeight.value / maxOvershootRatio
-        if (newHeight < minAllowedHeight) newHeight = minAllowedHeight
+        newHeight = clampHeight(newHeight)
       }
     }
   } else if (rawHeight > maxHeight.value) {
@@ -350,15 +373,70 @@ const updateHeightSmooth = (rawHeight: number) => {
       const diff = rawHeight - maxHeight.value
       const easedDiff = useEasing ? Math.sqrt(diff) * 5 : diff
       newHeight = maxHeight.value + Math.min(diff, easedDiff)
-      const maxAllowedHeight = maxHeight.value * maxOvershootRatio
-      if (newHeight > maxAllowedHeight) newHeight = maxAllowedHeight
+      newHeight = clampHeight(newHeight)
     }
   }
 
   const current = parseFloat(panelHeight.value)
+
+  if (isScrollAllowed.value) {
+    newHeight = newHeight > maxHeight.value ? maxHeight.value : newHeight
+    panelHeight.value = `${newHeight}px`
+    return
+  }
+
   const smoothed =
     current * (1 - smoothFactor.value) + newHeight * smoothFactor.value
   panelHeight.value = `${smoothed}px`
+}
+
+// پیدا کردن نزدیک‌ترین اسنپ
+function findNearestSnapIndex(height: number): number {
+  let closestIndex = 0
+  let closestDistance = Infinity
+  pixelSnapPoints.value.forEach((h, i) => {
+    const dist = Math.abs(h - height)
+    if (dist < closestDistance) {
+      closestDistance = dist
+      closestIndex = i
+    }
+  })
+  return closestIndex
+}
+
+function shouldClose(
+  currHeight: number,
+  movingDown: boolean,
+  currentIndex: number,
+): boolean {
+  if (!canSwipeClose.value) return false
+
+  const currSnapHeight = pixelSnapPoints.value[currentIndex]
+  const minSnapHeight = pixelSnapPoints.value[minSnapIndex.value]
+  const maxSnapHeight = pixelSnapPoints.value[maxSnapIndex.value]
+  const pulledDownPx = Math.max(0, minSnapHeight - currHeight)
+
+  const closeThresholdPx =
+    (maxSnapHeight - minSnapHeight) * closeRelativeThreshold.value
+  const distancePulled = Math.max(0, currSnapHeight - currHeight)
+
+  // حالت ۱: خیلی نزدیک صفر
+  if (currHeight <= closeAbsNear.value) return true
+
+  // حالت ۲: به اندازه‌ی کافی زیرِ پایین‌ترین اسنپ رفتیم
+  if (pulledDownPx >= closeBelowMin.value) return true
+
+  // حالت ۳: فلینگ سریع رو به پایین
+  if (
+    movingDown &&
+    Math.abs(velocity) >= closeVelocityThreshold.value &&
+    (distancePulled >= closeThresholdPx ||
+      pulledDownPx >= closeVelocityGrace.value)
+  ) {
+    return true
+  }
+
+  return false
 }
 
 const endDrag = () => {
@@ -369,48 +447,52 @@ const endDrag = () => {
     rafId = null
   }
 
-  const currentHeight = parseFloat(panelHeight.value)
-  const currIndex = currentSnapIndex.value
-  const currSnapHeight = pixelSnapPoints.value[currIndex]
+  const currHeight = parseFloat(panelHeight.value)
+  const currSnapHeight = pixelSnapPoints.value[currentSnapIndex.value]
 
-  // velocity thresholds پویا بر اساس ارتفاع اسنپ
-  const baseFactor = 10 // قابل تنظیم برای حساسیت پرتاب
-  const minVelocity = 800 // حداقل سرعت برای پرتاب سریع
-  const maxVelocity = 2000 // حداکثر سرعت برای اسنپ‌های خیلی بزرگ
+  const movingDown = deltaY !== 0 ? deltaY < 0 : velocity > 0
 
-  const fastDownThreshold = Math.min(
-    maxVelocity,
-    Math.max(minVelocity, currSnapHeight * baseFactor),
-  )
-  const fastUpThreshold = -fastDownThreshold
-
-  // بررسی بستن سریع
-  const pulledDownPx = Math.max(0, currSnapHeight - currentHeight)
-  const closeThresholdPx = currSnapHeight * 0.2
-
-  if (canSwipeClose.value && pulledDownPx >= closeThresholdPx) {
+  if (shouldClose(currHeight, movingDown, currentSnapIndex.value)) {
     close()
-    emit('dragEnd', currIndex)
     cleanup()
+    emit('dragEnd', currentSnapIndex.value)
     return
   }
 
-  // تعیین اسنپ بعدی
-  let targetIndex = currIndex
+  // ---------- بررسی Drag واقعی ----------
+  const distanceDragged = Math.abs(currHeight - currSnapHeight)
+  const MIN_DRAG_DISTANCE = 5 // px، مقدار پیشنهادی
 
-  const delta = currentHeight - currSnapHeight
-
-  if (delta > 5 || velocity < fastUpThreshold) {
-    // درگ به سمت بالا (افزایش ارتفاع)
-    targetIndex = Math.min(currIndex + 1, pixelSnapPoints.value.length - 1)
-  } else if (delta < -5 || velocity > fastDownThreshold) {
-    // درگ به سمت پایین (کاهش ارتفاع)
-    targetIndex = Math.max(currIndex - 1, minSnapIndex.value)
-  } else {
-    targetIndex = currIndex
+  if (distanceDragged < MIN_DRAG_DISTANCE) {
+    // لمس کوتاه → اسنپ تغییر نمی‌کند
+    cleanup()
+    emit('dragEnd', currentSnapIndex.value)
+    return
   }
 
-  // اعمال اسنپ
+  let closestIndex = findNearestSnapIndex(currHeight)
+  let targetIndex = closestIndex
+  let candidateIndex: number
+
+  if (movingDown) {
+    candidateIndex = Math.max(closestIndex - 1, minSnapIndex.value)
+  } else {
+    candidateIndex = Math.min(closestIndex + 1, maxSnapIndex.value)
+  }
+
+  if (Math.abs(velocity) > fastSwipeThreshold.value) {
+    targetIndex = candidateIndex
+  } else {
+    const midPoint =
+      (currSnapHeight + pixelSnapPoints.value[candidateIndex]) / 2
+    if (movingDown) {
+      targetIndex = currHeight > midPoint ? closestIndex : candidateIndex
+    } else {
+      targetIndex = currHeight < midPoint ? closestIndex : candidateIndex
+    }
+  }
+
+  // ---------- اعمال اسنپ نهایی ----------
   targetHeight.value = `${pixelSnapPoints.value[targetIndex]}px`
   currentSnapIndex.value = targetIndex
 
@@ -425,7 +507,13 @@ const cleanup = () => {
   window.removeEventListener('pointerup', endDrag)
 }
 
-defineExpose({ open, close, snapToPoint, isOpened: computed(() => show.value) })
+defineExpose({
+  open,
+  close,
+  snapToPoint,
+  isOpened: computed(() => show.value),
+  pixelSnapPoints,
+})
 </script>
 
 <template>
