@@ -28,12 +28,24 @@ const props = withDefaults(
     disableEdgeBounce?: boolean
     smoothFactor?: number
     animationDuration?: number
-    fastSwipeThreshold?: number
-    closeAbsNear?: number // خیلی نزدیک صفر → fast close
-    closeBelowMin?: number // کشیده شدن زیر پایین‌ترین snap
-    closeVelocityThreshold?: number // آستانه سرعت برای fast close
-    closeVelocityGrace?: number // ارفاق سرعت
-    closeRelativeThreshold?: number // درصد فاصله برای فلینگ سریع
+    minDragDistance?: number // حداقل فاصله drag برای اسنپ معمولی
+    fastSwipeVelocity?: number // سرعت لازم برای پرش سریع به snap بعدی
+    fastSwipeMaxTapTime?: number // حداکثر زمان برای tap سریع جهت fast swipe
+    closeMinDragDistance?: number // حداقل فاصله drag برای تشخیص intent بستن
+    closeMaxTapTime?: number // حداکثر زمان برای tap سریع جهت بستن
+    closeRelativeThreshold?: number // درصد فاصله برای تشخیص intent بستن
+    fastClose?: boolean
+    fastCloseMode?:
+      | 'default'
+      | 'maxSnap'
+      | ((
+          currHeight: number,
+          velocity: number,
+          elapsedTime: number,
+          currentIndex: number,
+        ) => boolean)
+    fastCloseVelocity?: number // سرعت لازم برای بستن پنل
+    fastCloseVelocityGrace?: number // ارفاق سرعت هنگام بستن
   }>(),
   {
     darkMode: false,
@@ -50,12 +62,16 @@ const props = withDefaults(
     disableEdgeBounce: false,
     smoothFactor: 0.7,
     animationDuration: 150,
-    fastSwipeThreshold: 200,
-    closeAbsNear: 24,
-    closeBelowMin: 56,
-    closeVelocityThreshold: 1500,
-    closeVelocityGrace: 40,
+    minDragDistance: 5,
+    fastSwipeVelocity: 100,
+    fastSwipeMaxTapTime: 200,
+    closeMinDragDistance: 5,
+    closeMaxTapTime: 200,
     closeRelativeThreshold: 0.2,
+    fastClose: false,
+    fastCloseMode: 'default',
+    fastCloseVelocity: 100,
+    fastCloseVelocityGrace: 40,
   },
 )
 
@@ -83,10 +99,11 @@ const panelHeight = ref('0px')
 const targetHeight = ref('0px')
 const isDragging = ref(false)
 
+const snapOriginalIndices = ref<number[]>([])
 const pixelSnapPoints = computed<number[]>(() => {
   const vh = window.innerHeight
-  let val = props.snapPoints
-    .map(p => {
+  let pointsWithIndex = props.snapPoints
+    .map((p, index) => {
       let val = 0
       if (typeof p === 'string' && p.endsWith('%')) {
         val = (parseFloat(p) / 100) * vh
@@ -98,16 +115,18 @@ const pixelSnapPoints = computed<number[]>(() => {
         console.warn(`Invalid snap point value detected: ${p}. Ignored.`)
         return null
       }
-      return val
+      return { value: val, originalIndex: index }
     })
-    .filter((v): v is number => v !== null)
+    .filter((v): v is { value: number; originalIndex: number } => v !== null)
 
-  if (val.length === 0) {
-    val = [100]
+  if (pointsWithIndex.length === 0) {
     console.warn('pixelSnapPoints was empty after update, set default 100px')
+    return [100]
   }
 
-  return val
+  pointsWithIndex.sort((a, b) => a.value - b.value)
+  snapOriginalIndices.value = pointsWithIndex.map(p => p.originalIndex)
+  return pointsWithIndex.map(p => p.value)
 })
 const canSwipeClose = computed(() => props.canSwipeClose)
 const initialSnapPoint = computed(() => props.initialSnapPoint)
@@ -123,13 +142,16 @@ const smoothFactor = computed(() => props.smoothFactor)
 const animationDuration = computed(() => props.animationDuration)
 const animationDurationSeconds = computed(() => animationDuration.value / 1000)
 
-const fastSwipeThreshold = computed(() => props.fastSwipeThreshold)
-
-const closeAbsNear = computed(() => props.closeAbsNear)
-const closeBelowMin = computed(() => props.closeBelowMin)
-const closeVelocityThreshold = computed(() => props.closeVelocityThreshold)
-const closeVelocityGrace = computed(() => props.closeVelocityGrace)
+const minDragDistance = computed(() => props.minDragDistance)
+const fastSwipeVelocity = computed(() => props.fastSwipeVelocity)
+const fastSwipeMaxTapTime = computed(() => props.fastSwipeMaxTapTime)
+const closeMinDragDistance = computed(() => props.closeMinDragDistance)
+const closeMaxTapTime = computed(() => props.closeMaxTapTime)
 const closeRelativeThreshold = computed(() => props.closeRelativeThreshold)
+const fastClose = computed(() => props.fastClose)
+const fastCloseMode = computed(() => props.fastCloseMode)
+const fastCloseVelocity = computed(() => props.fastCloseVelocity)
+const fastCloseVelocityGrace = computed(() => props.fastCloseVelocityGrace)
 
 const minHeight = computed(() => Math.min(...pixelSnapPoints.value))
 const maxHeight = computed(() => Math.max(...pixelSnapPoints.value))
@@ -155,6 +177,7 @@ const canScrollDrag = computed(
 let startY = 0
 let lastY = 0
 let deltaY = 0
+let startTime = 0
 let lastTime = 0
 let velocity = 0
 let startHeight = 0
@@ -224,20 +247,37 @@ function snapToPoint(index: number) {
     return
   }
 
-  currentSnapIndex.value = index
-  const point = pixelSnapPoints.value[index]
-  targetHeight.value = `${point}px`
+  if (currentSnapIndex.value != index) {
+    const point = pixelSnapPoints.value[index]
+    targetHeight.value = `${point}px`
+    currentSnapIndex.value = index
 
-  emit('snapChange', index)
+    cleanup()
+    emit('snapChange', index)
+  }
 }
 
-function recordDragPos(y: number, resetVelocity: boolean = false) {
-  if (resetVelocity) {
+function getOriginalIndex(sortedIndex: number): number {
+  if (sortedIndex < 0 || sortedIndex >= snapOriginalIndices.value.length) {
+    return -1
+  }
+  return snapOriginalIndices.value[sortedIndex]
+}
+
+function recordDragPos(y: number, isStartDrag: boolean = false) {
+  const now = performance.now()
+
+  if (isStartDrag) {
     deltaY = 0
     velocity = 0
+
+    startY = y
+    startTime = now
+    startHeight =
+      sheetRef.value?.$el?.offsetHeight || parseFloat(panelHeight.value)
+    panelHeight.value = `${startHeight}px`
   }
 
-  const now = performance.now()
   const dy = y - lastY
   const dt = now - lastTime
   deltaY = startY - y
@@ -288,11 +328,6 @@ const startDrag = (e: PointerEvent | TouchEvent, fromScroll = false) => {
     : (e as PointerEvent).clientY
 
   recordDragPos(clientY, true)
-
-  startY = clientY
-  startHeight =
-    sheetRef.value?.$el?.offsetHeight || parseFloat(panelHeight.value)
-  panelHeight.value = `${startHeight}px`
 
   if (isTouch) {
     window.addEventListener('touchmove', onTouchDrag, { passive: false })
@@ -406,6 +441,8 @@ function findNearestSnapIndex(height: number): number {
 
 function shouldClose(
   currHeight: number,
+  distanceDragged: number,
+  elapsedTime: number,
   movingDown: boolean,
   currentIndex: number,
 ): boolean {
@@ -414,29 +451,85 @@ function shouldClose(
   const currSnapHeight = pixelSnapPoints.value[currentIndex]
   const minSnapHeight = pixelSnapPoints.value[minSnapIndex.value]
   const maxSnapHeight = pixelSnapPoints.value[maxSnapIndex.value]
+  const isAtLowestSnap = currentIndex === minSnapIndex.value
+
   const pulledDownPx = Math.max(0, minSnapHeight - currHeight)
+  const distancePulled = Math.max(0, currSnapHeight - currHeight)
+
+  const isQuickTap =
+    distanceDragged > closeMinDragDistance.value &&
+    elapsedTime <= closeMaxTapTime.value
 
   const closeThresholdPx =
     (maxSnapHeight - minSnapHeight) * closeRelativeThreshold.value
-  const distancePulled = Math.max(0, currSnapHeight - currHeight)
 
-  // حالت ۱: خیلی نزدیک صفر
-  if (currHeight <= closeAbsNear.value) return true
+  let fastCloseDecision = false
+  if (fastClose.value) {
+    // تصمیم اولیه بر اساس سرعت و threshold های fast close
+    const baseFastClose =
+      velocity > 0 &&
+      Math.abs(velocity) >= fastCloseVelocity.value &&
+      (distancePulled >= closeThresholdPx ||
+        pulledDownPx >= fastCloseVelocityGrace.value)
 
-  // حالت ۲: به اندازه‌ی کافی زیرِ پایین‌ترین اسنپ رفتیم
-  if (pulledDownPx >= closeBelowMin.value) return true
+    // اعمال حالت fastCloseMode
+    if (fastCloseMode.value === 'maxSnap') {
+      fastCloseDecision = baseFastClose && currentIndex === maxSnapIndex.value
+    } else if (typeof fastCloseMode.value === 'function') {
+      fastCloseDecision =
+        velocity > 0 &&
+        fastCloseMode.value(currHeight, velocity, elapsedTime, currentIndex)
+    } else {
+      fastCloseDecision = baseFastClose
+    }
+  }
 
-  // حالت ۳: فلینگ سریع رو به پایین
+  // ------------------ Decision ------------------
   if (
     movingDown &&
-    Math.abs(velocity) >= closeVelocityThreshold.value &&
-    (distancePulled >= closeThresholdPx ||
-      pulledDownPx >= closeVelocityGrace.value)
+    ((fastClose.value && fastCloseDecision) ||
+      pulledDownPx >= closeThresholdPx ||
+      (isAtLowestSnap && isQuickTap))
   ) {
     return true
   }
 
   return false
+}
+const calculateTargetIndex = (
+  currHeight: number,
+  elapsedTime: number,
+  movingDown: boolean,
+): number => {
+  const closestIndex = findNearestSnapIndex(currHeight)
+  let targetIndex = closestIndex
+  let candidateIndex: number
+
+  const isFastSwipe =
+    Math.abs(velocity) >= fastSwipeVelocity.value &&
+    elapsedTime <= fastSwipeMaxTapTime.value
+
+  if (movingDown) {
+    candidateIndex = Math.max(closestIndex - 1, minSnapIndex.value)
+  } else {
+    candidateIndex = Math.min(closestIndex + 1, maxSnapIndex.value)
+  }
+
+  if (isFastSwipe) {
+    targetIndex = candidateIndex
+  } else {
+    const currSnapHeight = pixelSnapPoints.value[currentSnapIndex.value]
+    const midPoint =
+      (currSnapHeight + pixelSnapPoints.value[candidateIndex]) / 2
+
+    if (movingDown) {
+      targetIndex = currHeight > midPoint ? closestIndex : candidateIndex
+    } else {
+      targetIndex = currHeight < midPoint ? closestIndex : candidateIndex
+    }
+  }
+
+  return targetIndex
 }
 
 const endDrag = () => {
@@ -452,51 +545,35 @@ const endDrag = () => {
 
   const movingDown = deltaY !== 0 ? deltaY < 0 : velocity > 0
 
-  if (shouldClose(currHeight, movingDown, currentSnapIndex.value)) {
+  // ---------- بررسی Drag واقعی ----------
+  const distanceDragged = Math.abs(currHeight - currSnapHeight)
+  const elapsedTime = performance.now() - startTime
+
+  if (
+    shouldClose(
+      currHeight,
+      distanceDragged,
+      elapsedTime,
+      movingDown,
+      currentSnapIndex.value,
+    )
+  ) {
     close()
     cleanup()
     emit('dragEnd', currentSnapIndex.value)
     return
   }
 
-  // ---------- بررسی Drag واقعی ----------
-  const distanceDragged = Math.abs(currHeight - currSnapHeight)
-  const MIN_DRAG_DISTANCE = 5 // px، مقدار پیشنهادی
-
-  if (distanceDragged < MIN_DRAG_DISTANCE) {
+  if (distanceDragged < minDragDistance.value) {
     // لمس کوتاه → اسنپ تغییر نمی‌کند
     cleanup()
     emit('dragEnd', currentSnapIndex.value)
     return
   }
 
-  let closestIndex = findNearestSnapIndex(currHeight)
-  let targetIndex = closestIndex
-  let candidateIndex: number
+  const targetIndex = calculateTargetIndex(currHeight, elapsedTime, movingDown)
 
-  if (movingDown) {
-    candidateIndex = Math.max(closestIndex - 1, minSnapIndex.value)
-  } else {
-    candidateIndex = Math.min(closestIndex + 1, maxSnapIndex.value)
-  }
-
-  if (Math.abs(velocity) > fastSwipeThreshold.value) {
-    targetIndex = candidateIndex
-  } else {
-    const midPoint =
-      (currSnapHeight + pixelSnapPoints.value[candidateIndex]) / 2
-    if (movingDown) {
-      targetIndex = currHeight > midPoint ? closestIndex : candidateIndex
-    } else {
-      targetIndex = currHeight < midPoint ? closestIndex : candidateIndex
-    }
-  }
-
-  // ---------- اعمال اسنپ نهایی ----------
-  targetHeight.value = `${pixelSnapPoints.value[targetIndex]}px`
-  currentSnapIndex.value = targetIndex
-
-  cleanup()
+  snapToPoint(targetIndex)
   emit('dragEnd', targetIndex)
 }
 
@@ -508,11 +585,12 @@ const cleanup = () => {
 }
 
 defineExpose({
+  isOpened: computed(() => show.value),
   open,
   close,
   snapToPoint,
-  isOpened: computed(() => show.value),
   pixelSnapPoints,
+  getOriginalIndex,
 })
 </script>
 

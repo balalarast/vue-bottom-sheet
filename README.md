@@ -103,15 +103,18 @@ export default defineNuxtConfig({
 | `disableEdgeBounce`       | `boolean`                    | `false`                | Disables bounce effect at edges when dragging beyond min/max limits. |
 | `smoothFactor`            | `number`                     | `0.7`                  | Smoothing factor for height animation. |
 | `animationDuration`       | `number`                     | `150`                  | Duration of open/close animation in milliseconds. |
-| `fastSwipeThreshold`      | `number`                     | `200`                  | Minimum velocity (px/s) to trigger a fast swipe. |
-| `closeAbsNear`            | `number`                     | `24`                   | If sheet height is very close to zero, it will close. |
-| `closeBelowMin`           | `number`                     | `56`                   | If sheet is dragged below the minimum snap point by this value, it will close. |
-| `closeVelocityThreshold`  | `number`                     | `1500`                 | Velocity threshold for fast swipe close. |
-| `closeVelocityGrace`      | `number`                     | `40`                   | Additional allowance for fast swipe close. |
-| `closeRelativeThreshold`  | `number`                     | `0.2`                  | Relative distance threshold for fast swipe close (percentage of snap distance). |
+| `minDragDistance`         | `number`                     | `5`                    | Minimum distance for drag to trigger snap. |
+| `fastSwipeVelocity`       | `number`                     | `100`                  | Velocity threshold for fast swipe to next snap point. |
+| `fastSwipeMaxTapTime`     | `number`                     | `200`                  | Maximum duration for a fast swipe to trigger. |
+| `closeMinDragDistance`    | `number`                     | `5`                    | Minimum distance dragged to trigger close intent. |
+| `closeMaxTapTime`         | `number`                     | `200`                  | Maximum time for tap to consider close intent. |
+| `closeRelativeThreshold`  | `number`                     | `0.2`                  | Relative distance threshold for swipe-to-close. |
+| `fastClose`               | `boolean`                    | `false`                | Enables fast swipe-to-close behavior. |
+| `fastCloseMode`           | `'default' \| 'maxSnap' \| function` | `'default'` | Mode to determine how fastClose behaves. |
+| `fastCloseVelocity`       | `number`                     | `100`                  | Minimum velocity to trigger fastClose. |
+| `fastCloseVelocityGrace`  | `number`                     | `40`                   | Extra allowance for fastClose velocity. |
 
 ## Exposed Methods & Properties
-
 This component exposes several methods and properties via `ref` so you can control it programmatically.
 
 | Name | Type | Description |
@@ -120,7 +123,8 @@ This component exposes several methods and properties via `ref` so you can contr
 | `close()` | `Promise<void>` | Closes the Bottom Sheet with an animation. |
 | `snapToPoint(index: number)` | `void` | Moves the Bottom Sheet to the snap point at the given index (based on the `snapPoints` array). |
 | `isOpened` | `ComputedRef<boolean>` | Indicates whether the Bottom Sheet is currently open (read-only). |
-
+| `pixelSnapPoints` | `ComputedRef<number[]>` | Returns the calculated pixel values of all snap points. |
+| `getOriginalIndex(sortedIndex: number)` | `number` | Returns the original index of a snap point before sorting, useful when `snapPoints` are not in order. |
 
 <details>
 <summary>Example</summary>
