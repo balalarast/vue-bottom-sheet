@@ -3,8 +3,6 @@
 Bottom Sheet component for Vue 3 and Nuxt 3 with drag support, multiple snap points, and dark mode.  
 Built with [@oku-ui/motion](https://motion.oku-ui.com) for smooth and performant animations.
 
-![Demo Screen](demo-screen.gif)
-
 ## Features
 
 - Compatible with Vue 3 and Nuxt 3
@@ -14,6 +12,14 @@ Built with [@oku-ui/motion](https://motion.oku-ui.com) for smooth and performant
 - Dark mode support
 - Prevent pull-to-refresh on mobile devices
 - Ability to use teleport for rendering in custom locations
+
+## Demo
+
+You can try the live demo here:  
+👉 [Open Demo on CodeSandbox](https://codesandbox.io/p/devbox/quizzical-napier-rhwgsx?embed=1)
+
+![Demo Screen](demo-screen.gif)
+
 
 ## Install
 
