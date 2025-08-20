@@ -23,6 +23,7 @@
   "scripts": {
     "dev": "nuxi dev playground",
     "dev:build": "nuxi build playground",
+    "generate": "nuxi generate playground",
     "build": "tsc",
     "test": "vitest",
     "test:ui": "vitest --ui",

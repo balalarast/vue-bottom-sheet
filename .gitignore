@@ -4,7 +4,10 @@ node_modules/
 # خروجی کامپایل TypeScript
 dist/
 build/
+
+# خروجی کامپایل Nuxt
 .nuxt/
+.output/
 
 # فایل‌های لاگ
 npm-debug.log*

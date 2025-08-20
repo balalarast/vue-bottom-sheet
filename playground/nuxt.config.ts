@@ -8,4 +8,10 @@ export default defineNuxtConfig({
   modules: [
     VueBottomSheet
   ],
+
+  nitro: {
+    output: {
+      publicDir: '../dist'
+    }
+  }
 })
