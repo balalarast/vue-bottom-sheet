@@ -4,7 +4,7 @@ import BottomSheet from '../src/components/BottomSheet.vue'
 
 const bottomSheet = ref<InstanceType<typeof BottomSheet>>()
 const lastSnapPointIndex = ref(0)
-const itemIndex = ref()
+const activeItemIndex = ref()
 const isLight = ref(true)
 const refItems = ref<any[]>([])
 
@@ -36,13 +36,13 @@ function handleDragEnd(finalIndex: number) {
 }
 
 function selectItem(index: number) {
-  itemIndex.value = index
+  activeItemIndex.value = index
   focusItem()
   snapToPoint(0)
 }
 
 function focusItem() {
-  const el = refItems.value[itemIndex.value] as HTMLElement
+  const el = refItems.value[activeItemIndex.value] as HTMLElement
   if (el) {
     el.scrollIntoView({
       behavior: 'smooth',
@@ -97,7 +97,7 @@ onUnmounted(() => {
           v-for="i in 20"
           :key="i"
           class="content-item"
-          :class="itemIndex >= 0 && itemIndex === i && 'active'"
+          :class="activeItemIndex >= 0 && activeItemIndex === i && 'active'"
           @click="selectItem(i)"
           :ref="el => (refItems[i] = el)"
         >
@@ -154,9 +154,9 @@ onUnmounted(() => {
   padding: 0;
 }
 .content-item {
-    border-bottom: 1px solid #fff;
-    padding: 10px 17px;
-    cursor: pointer;
+  border-bottom: 1px solid #fff;
+  padding: 10px 17px;
+  cursor: pointer;
 }
 .content-item.active {
   color: #ffffff;
@@ -178,6 +178,6 @@ onUnmounted(() => {
 }
 
 [data-theme="dark"] .content-item {
-    border-color: #475569;
+  border-color: #475569;
 }
 </style>
