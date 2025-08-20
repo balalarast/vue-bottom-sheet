@@ -5,7 +5,9 @@ import BottomSheet from '../src/components/BottomSheet.vue'
 // Refs
 const bottomSheetRef = ref<InstanceType<typeof BottomSheet>>()
 const currentSnapPointIndex = ref(0)
+const showOverlay = ref(true)
 const autoSnap = ref()
+const expandOnDrag = ref(true)
 const activeItemIndex = ref<number | null>(null)
 const isLightTheme = ref(true)
 const itemRefs = ref<HTMLElement[]>([])
@@ -67,14 +69,27 @@ onUnmounted(() => {
       <button @click="toggleSheet">Open/Close</button>
       &nbsp;
       <button @click="toggleTheme">Dark/Light</button>
-      &nbsp;
-      <label>
-        <input type="checkbox" v-model="autoSnap" /> Snap to first point on item select
-      </label>
+      <div>
+        <label>
+          <input type="checkbox" v-model="autoSnap" /> Snap to first point on item select
+        </label>
+      </div>
+      <div>
+        <label>
+          <input type="checkbox" v-model="showOverlay" /> Show Overlay when sheet is open
+        </label>
+      </div>
+      <div>
+        <label>
+          <input type="checkbox" v-model="expandOnDrag" /> Expand on content drag <small class="text-gray"> (works only in responsive design mode with touch simulation enabled)</small>
+        </label>
+      </div>
 
       <BottomSheet
         ref="bottomSheetRef"
         :initial-snap-point="currentSnapPointIndex"
+        :overlay="showOverlay"
+        :expand-on-content-drag="expandOnDrag"
         :hide-scrollbar="true"
         :snap-points="['50%', '90%']"
         :dark-mode="!isLightTheme"
@@ -102,6 +117,9 @@ onUnmounted(() => {
 </template>
 
 <style lang="pcss">
+.text-gray {
+  color: rgb(100,116,139);
+}
 .ba-bs-header--border {
   border: none !important;
 }
