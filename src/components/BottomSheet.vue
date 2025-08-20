@@ -230,6 +230,10 @@ async function open() {
 
 async function close() {
   return new Promise<void>(resolve => {
+    if (!canSwipeClose.value) {
+      resolve()
+      return
+    }
     targetHeight.value = '0px'
 
     setTimeout(() => {

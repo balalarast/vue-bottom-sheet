@@ -4,13 +4,16 @@ import BottomSheet from '../src/components/BottomSheet.vue'
 
 // Refs
 const bottomSheetRef = ref<InstanceType<typeof BottomSheet>>()
+const itemRefs = ref<HTMLElement[]>([])
 const currentSnapPointIndex = ref(0)
-const showOverlay = ref(true)
-const autoSnap = ref()
-const expandOnDrag = ref(true)
 const activeItemIndex = ref<number | null>(null)
 const isLightTheme = ref(true)
-const itemRefs = ref<HTMLElement[]>([])
+const canSwipeClose = ref(true)
+const showOverlay = ref(true)
+const autoSnap = ref()
+const expandOnDrag = ref(false)
+const fastCloseEnabled = ref(false)
+const disableEdgeBounce = ref(false)
 
 // Actions
 const openSheet = async () => {
@@ -19,7 +22,7 @@ const openSheet = async () => {
 }
 const closeSheet = () => bottomSheetRef.value?.close()
 
-const toggleSheet = () => bottomSheetRef.value?.isOpened ? closeSheet() : openSheet()
+const toggleSheet = () => bottomSheetRef.value?.isOpened && canSwipeClose.value ? closeSheet() : openSheet()
 
 const toggleTheme = () => {
   isLightTheme.value = !isLightTheme.value
@@ -66,30 +69,77 @@ onUnmounted(() => {
 <template>
   <div>
     <ClientOnly>
-      <button @click="toggleSheet">Open/Close</button>
+      <button @click="toggleSheet">Open<span v-if="canSwipeClose">/Close</span></button>
       &nbsp;
       <button @click="toggleTheme">Dark/Light</button>
-      <div>
-        <label>
-          <input type="checkbox" v-model="autoSnap" /> Snap to first point on item select
-        </label>
+      <div class="playground-settings">
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" v-model="canSwipeClose" /> Enable Swipe to Close
+          </label>
+          <div class="description">
+            When enabled, the panel can be closed by swiping it downward.
+          </div>
+        </div>
+        <div>
+          <label>
+            <input type="checkbox" v-model="showOverlay" />
+            Enable Overlay
+          </label>
+          <p class="description">Toggles a semi-transparent overlay behind the panel.</p>
+        </div>
+
+        <div>
+          <label>
+            <input type="checkbox" v-model="expandOnDrag" />
+            Expand on Content Drag
+          </label>
+          <p class="description">
+            When enabled, dragging the content panel will move the panel itself.
+            <small>Works only in Responsive Design Mode with touch simulation enabled.</small>
+          </p>
+        </div>
+
+        <div>
+          <label>
+            <input type="checkbox" v-model="autoSnap" />
+            Snap to First Point on Item Select
+          </label>
+          <p class="description">
+            Automatically snaps the panel to the first snap point when an item inside is selected.
+          </p>
+        </div>
+
+        <div>
+          <label>
+            <input type="checkbox" v-model="fastCloseEnabled" />
+            Enable Fast Close
+          </label>
+          <p class="description">
+            Allows the panel to close quickly if dragged fast enough. Works with velocity and distance thresholds.
+          </p>
+        </div>
+
+        <div>
+          <label>
+            <input type="checkbox" v-model="disableEdgeBounce" />
+            Disable Edge Bounce
+          </label>
+          <p class="description">
+            When enabled, the panel won't overshoot beyond the min or max snap points when dragged, providing a firm boundary effect.
+          </p>
+        </div>
       </div>
-      <div>
-        <label>
-          <input type="checkbox" v-model="showOverlay" /> Show Overlay when sheet is open
-        </label>
-      </div>
-      <div>
-        <label>
-          <input type="checkbox" v-model="expandOnDrag" /> Expand on content drag <small class="text-gray"> (works only in responsive design mode with touch simulation enabled)</small>
-        </label>
-      </div>
+
 
       <BottomSheet
         ref="bottomSheetRef"
+        :can-swipe-close="canSwipeClose"
         :initial-snap-point="currentSnapPointIndex"
         :overlay="showOverlay"
         :expand-on-content-drag="expandOnDrag"
+        :fast-close="fastCloseEnabled"
+        :disable-edge-bounce="disableEdgeBounce"
         :hide-scrollbar="true"
         :snap-points="['50%', '90%']"
         :dark-mode="!isLightTheme"
@@ -111,21 +161,42 @@ onUnmounted(() => {
         >
           <div>Item {{ i }}</div>
         </div>
+        <template #footer>
+          <button @click="closeSheet" v-if="canSwipeClose">Close</button>
+          <button @click="canSwipeClose = true" v-else>Enable Swipe to Close</button>
+          &nbsp;
+          <button @click="toggleTheme">Dark/Light</button>
+        </template>
       </BottomSheet>
     </ClientOnly>
   </div>
 </template>
 
 <style lang="pcss">
-.text-gray {
-  color: rgb(100,116,139);
+.playground-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
 }
-.ba-bs-header--border {
+.playground-settings .setting-item {
+  display: flex;
+  flex-direction: column;
+}
+.playground-settings .description {
+  margin-left: 24px; /* کمی فاصله از چک‌باکس */
+  font-size: 0.875rem;
+  color: rgb(100,116,139);
+  margin: 0
+}
+.ba-bs-header--border,
+.ba-bs-footer {
   border: none !important;
 }
 .ba-bs-scroll {
-  border-radius: var(--ba-radius) var(--ba-radius) 0 0;
+  border-radius: var(--ba-radius) var(--ba-radius) var(--ba-radius) var(--ba-radius);
   background-color: rgb(148,163,184, .2);
+  margin: 0 20px;
 }
 [data-theme="dark"] {
   color: #fff
