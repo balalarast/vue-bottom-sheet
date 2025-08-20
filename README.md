@@ -9,6 +9,30 @@
 Bottom Sheet component for Vue 3 and Nuxt 3 with drag support, multiple snap points, and dark mode.  
 Built with [@oku-ui/motion](https://motion.oku-ui.com) for smooth and performant animations.
 
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Demo](#demo)
+- [Install](#install)
+- [Usage in Vue 3](#usage-in-vue-3)
+  - [1. Registering the Component Globally (Recommended)](#1-registering-the-component-globally-recommended)
+  - [2. Direct Import in Components](#2-direct-import-in-components)
+- [Usage in Nuxt 3](#usage-in-nuxt-3)
+  - [1. Using Nuxt Module (Recommended)](#1-using-nuxt-module-recommended)
+  - [2. Registering the Component in Plugins](#2-registering-the-component-in-plugins)
+  - [3. Direct Import in Components](#3-direct-import-in-components)
+- [Props and Configuration](#props-and-configuration)
+- [Exposed Methods & Properties](#exposed-methods--properties)
+- [Events](#events)
+- [Styling guide](#styling-guide)
+- [Running Playground](#running-playground)
+- [Running Tests](#running-tests)
+
+---
+
 ## Features
 
 - Compatible with Vue 3 and Nuxt 3
@@ -40,6 +64,42 @@ yarn add @balalarast/vue-bottom-sheet
 ```
 
 ## Usage in Vue 3
+
+### 1. Registering the Component Globally (Recommended)
+
+If you prefer to register the component globally, create a file like plugins/bottom-sheet.ts and register it:
+
+```ts
+import { createApp } from 'vue'
+import BottomSheet from '@balalarast/vue-bottom-sheet'
+
+export default (app: ReturnType<typeof createApp>) => {
+  app.component('BottomSheet', BottomSheet)
+}
+```
+
+Then you can use it in any component without importing:
+
+```ts
+<script setup lang="ts">
+import { ref } from 'vue'
+
+const sheetRef = ref(null)
+
+function openSheet() {
+  sheetRef.value?.open()
+}
+</script>
+
+<template>
+  <button @click="openSheet">Open Bottom Sheet</button>
+  <BottomSheet ref="sheetRef" />
+</template>
+```
+
+---
+
+### 2. Direct Import in Components
 
 ```ts
 <script setup lang="ts">
@@ -75,9 +135,29 @@ export default defineNuxtConfig({
 })
 ```
 
-### 2. Registering the Component (in `plugins/bottom-sheet.client.ts`)
+Using the Component in Your Vue Files:
 
-If you prefer manual registration, create a plugin file and register the component:
+```ts
+<script setup lang="ts">
+const sheetRef = ref(null)
+
+function openSheet() {
+  sheetRef.value?.open()
+}
+</script>
+
+<template>
+  <button @click="openSheet">Open Bottom Sheet</button>
+  <BottomSheet ref="sheetRef" />
+</template>
+```
+
+---
+
+### 2. Registering the Component in Plugins
+
+If you prefer manual registration, you can create a Nuxt plugin file (e.g., plugins/bottom-sheet.client.ts) and register the BottomSheet component globally.
+This way, the component will be available in all your Vue components without the need to import it individually.
 
 ```ts
 import { defineNuxtPlugin } from '#app'
@@ -88,7 +168,26 @@ export default defineNuxtPlugin(nuxtApp => {
 })
 ```
 
-### 3. Using in Components
+Using the Component in Your Vue Files:
+
+```ts
+<script setup lang="ts">
+const sheetRef = ref(null)
+
+function openSheet() {
+  sheetRef.value?.open()
+}
+</script>
+
+<template>
+  <button @click="openSheet">Open Bottom Sheet</button>
+  <BottomSheet ref="sheetRef" />
+</template>
+```
+
+---
+
+### 3. Direct Import in Components
 
 You can import and use the component directly inside your components:
 
