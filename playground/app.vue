@@ -2,55 +2,55 @@
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import BottomSheet from '../src/components/BottomSheet.vue'
 
-const bottomSheet = ref<InstanceType<typeof BottomSheet>>()
-const lastSnapPointIndex = ref(0)
-const activeItemIndex = ref()
-const isLight = ref(true)
-const refItems = ref<any[]>([])
+// Refs
+const bottomSheetRef = ref<InstanceType<typeof BottomSheet>>()
+const currentSnapPointIndex = ref(0)
+const autoSnap = ref()
+const activeItemIndex = ref<number | null>(null)
+const isLightTheme = ref(true)
+const itemRefs = ref<HTMLElement[]>([])
 
+// Actions
 const openSheet = async () => {
-  await bottomSheet.value?.open()
-  focusItem()
+  await bottomSheetRef.value?.open()
+  scrollToActiveItem()
 }
-const closeSheet = () => {
-  bottomSheet.value?.close()
-}
-const toggleSheet = () => {
-  if(bottomSheet.value?.isOpened) {
-    closeSheet()
-  } else {
-    openSheet()
-  }
-}
+const closeSheet = () => bottomSheetRef.value?.close()
 
-const toggleMode = () => {
-    isLight.value = !isLight.value
+const toggleSheet = () => bottomSheetRef.value?.isOpened ? closeSheet() : openSheet()
+
+const toggleTheme = () => {
+  isLightTheme.value = !isLightTheme.value
 }
 
 const snapToPoint = (snapPoint: number) => {
-  bottomSheet.value?.snapToPoint(snapPoint)
+  bottomSheetRef.value?.snapToPoint(snapPoint)
 }
 
-function handleDragEnd(finalIndex: number) {
-  lastSnapPointIndex.value = finalIndex
+const handleDragEnd = (finalIndex: number) => {
+  currentSnapPointIndex.value = finalIndex
 }
 
-function selectItem(index: number) {
+const selectItem = (index: number) => {
   activeItemIndex.value = index
-  focusItem()
-  snapToPoint(0)
-}
-
-function focusItem() {
-  const el = refItems.value[activeItemIndex.value] as HTMLElement
-  if (el) {
-    el.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    })
+  if(autoSnap.value) {
+    snapToPoint(0)
+    setTimeout(scrollToActiveItem, 100)
+  } else {
+    scrollToActiveItem()
   }
+
 }
 
+const scrollToActiveItem = () => {
+  const el = activeItemIndex.value !== null ? itemRefs.value[activeItemIndex.value] : null
+  el?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  })
+}
+
+// Lifecycle
 onMounted(async () => {
   await nextTick()
   document.body.classList.add('overflow-hidden')
@@ -58,48 +58,41 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.body.classList.remove('overflow-hidden')
-  bottomSheet.value?.close()
 })
 </script>
 
 <template>
   <div>
     <ClientOnly>
-      <button
-        @click="toggleSheet"
-      >
-        Open/Close
-      </button>
+      <button @click="toggleSheet">Open/Close</button>
       &nbsp;
-      <button
-        @click="toggleMode"
-      >
-        Dark/Light
-      </button>
+      <button @click="toggleTheme">Dark/Light</button>
+      &nbsp;
+      <label>
+        <input type="checkbox" v-model="autoSnap" /> Snap to first point on item select
+      </label>
 
       <BottomSheet
-        ref="bottomSheet"
-        :initial-snap-point="lastSnapPointIndex"
-        :hideScrollbar="true"
+        ref="bottomSheetRef"
+        :initial-snap-point="currentSnapPointIndex"
+        :hide-scrollbar="true"
         :snap-points="['50%', '90%']"
-        :dark-mode="!isLight"
+        :dark-mode="!isLightTheme"
         @vue:mounted="openSheet"
         @drag-end="handleDragEnd"
       >
         <template #header>
-            <div>
-                Bottom Sheet Demo
-            </div>
+          <div>Bottom Sheet Demo</div>
         </template>
 
-        <!--Content-->
+        <!-- Content -->
         <div
           v-for="i in 20"
           :key="i"
           class="content-item"
-          :class="activeItemIndex >= 0 && activeItemIndex === i && 'active'"
+          :class="{ active: activeItemIndex === i }"
           @click="selectItem(i)"
-          :ref="el => (refItems[i] = el)"
+          :ref="el => (itemRefs[i] = el as HTMLElement)"
         >
           <div>Item {{ i }}</div>
         </div>
@@ -109,34 +102,6 @@ onUnmounted(() => {
 </template>
 
 <style lang="pcss">
-:root {
-  /* primary - آبی آرامش‌بخش (sky) */
-  --color-primary-50: 240 249 255; /* #f0f9ff */
-  --color-primary-100: 224 242 254; /* #e0f2fe */
-  --color-primary-200: 186 230 253; /* #bae6fd */
-  --color-primary-300: 125 211 252; /* #7dd3fc */
-  --color-primary-400: 56 189 248; /* #38bdf8 */
-  --color-primary-500: 16 165 233; /* #10a5e9 */
-  --color-primary-600: 2 132 199; /* #0284c7 */
-  --color-primary-700: 3 105 161; /* #0369a1 */
-  --color-primary-800: 7 89 133; /* #075985 */
-  --color-primary-900: 12 74 110; /* #0c4a6e */
-  --color-primary-950: 8 47 73; /* #082f49 */
-
-  /* muted - خاکستری متعادل (zinc) */
-  --color-muted-50: 248 250 252; /* #f8fafc */
-  --color-muted-100: 241 245 249; /* #f1f5f9 */
-  --color-muted-200: 226 232 240; /* #e2e8f0 */
-  --color-muted-300: 203 213 225; /* #cbd5e1 */
-  --color-muted-400: 148 163 184; /* #94a3b8 */
-  --color-muted-500: 100 116 139; /* #64748b */
-  --color-muted-600: 71 85 105; /* #475569 */
-  --color-muted-700: 51 65 85; /* #334155 */
-  --color-muted-800: 30 41 59; /* #1e293b */
-  --color-muted-900: 15 23 42; /* #0f172a */
-  --color-muted-950: 2 6 23; /* #020617 */
-}
-
 .ba-bs-header--border {
   border: none !important;
 }
@@ -170,7 +135,7 @@ onUnmounted(() => {
   left: -50%;
   height: 100%;
   width: 100%;
-  background-color: rgb(var(--color-primary-600));
+  background-color: rgb(2,132,199);
   transform: translate(50%, 0) rotate(0) skewX(0) skewY(0) scaleX(1) scaleY(1);
 }
 .content-item.active div {
