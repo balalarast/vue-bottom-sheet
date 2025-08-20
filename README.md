@@ -17,8 +17,7 @@ Built with [@oku-ui/motion](https://motion.oku-ui.com) for smooth and performant
 
 You can try the live demo here:  
 
-👉 [Live Demo](https://rhwgsx-3000.csb.app/)  
-👉 [Open in CodeSandbox](https://codesandbox.io/embed/quizzical-napier-rhwgsx?view=preview)
+👉 [Live Demo](https://vue-bottom-sheet-alpha.vercel.app/)  
 
 ![Demo Screen](demo-screen.gif)
 
