@@ -24,7 +24,6 @@
     "dev": "nuxi dev playground",
     "build": "nuxi build playground",
     "generate": "nuxi generate playground",
-    "prepare": "npm run build",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:watch": "vitest --watch"
