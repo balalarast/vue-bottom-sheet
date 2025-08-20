@@ -21,6 +21,8 @@
     "nuxt.ts"
   ],
   "scripts": {
+    "dev": "nuxi dev playground",
+    "dev:build": "nuxi build playground",
     "build": "tsc",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -43,6 +45,7 @@
     "vue": "^3.2.0"
   },
   "devDependencies": {
+    "nuxt": "^3.18.1",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vitest/ui": "^3.2.4",
     "@vue/test-utils": "^2.4.6",
