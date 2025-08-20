@@ -61,7 +61,23 @@ function openSheet() {
 
 ## Usage in Nuxt 3
 
-### 1. Registering the Component (in `plugins/bottom-sheet.client.ts`)
+You can use **any one** of the following methods — choose the one that best fits your project setup.
+
+### 1. Using Nuxt Module (Recommended)
+
+If you have enabled the Nuxt module, make sure to add it in your `nuxt.config.ts` like this so that the component is automatically available throughout your project:
+
+```ts
+export default defineNuxtConfig({
+  modules: [
+    '@balalarast/vue-bottom-sheet/nuxt'
+  ],
+})
+```
+
+### 2. Registering the Component (in `plugins/bottom-sheet.client.ts`)
+
+If you prefer manual registration, create a plugin file and register the component:
 
 ```ts
 import { defineNuxtPlugin } from '#app'
@@ -72,13 +88,15 @@ export default defineNuxtPlugin(nuxtApp => {
 })
 ```
 
-### 2. Using in Components
+### 3. Using in Components
+
+You can import and use the component directly inside your components:
 
 ```ts
 <script setup lang="ts">
-// import BottomSheet from '@balalarast/vue-bottom-sheet'
-// const sheetRef = ref<InstanceType<typeof BottomSheet>>()
-const sheetRef = ref(null)
+import BottomSheet from '@balalarast/vue-bottom-sheet'
+
+const sheetRef = ref<InstanceType<typeof BottomSheet>>()
 
 function openSheet() {
   sheetRef.value?.open()
@@ -91,17 +109,6 @@ function openSheet() {
 </template>
 ```
 
-### 3. Using Nuxt Module (Recommended)
-
-If you have enabled the Nuxt module, make sure to add it in your `nuxt.config.ts` like this so that the component is automatically available throughout your project:
-
-```ts
-export default defineNuxtConfig({
-  modules: [
-    '@balalarast/vue-bottom-sheet/nuxt'
-  ],
-})
-```
 ## Props and Configuration
 | Prop Name                 | Type                         | Default                | Description |
 |----------------------------|------------------------------|------------------------|-------------|
