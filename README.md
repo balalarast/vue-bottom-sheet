@@ -279,6 +279,33 @@ function handleDragEnd(finalIndex: number) {
 
 </details>
 
+## Running Playground
+You can run the playground to try out the component locally and see examples in action.
+
+### 1. Install Dependencies
+```bash
+npm install
+```
+
+### 2. Run Playground in Development Mode
+```bash
+npm run dev
+```
+This will start a local Nuxt server for the playground folder and you can open it in your browser (usually at http://localhost:3000).
+
+### 3. Build Playground
+```bash
+npm run build
+```
+This will build the playground for development preview.
+
+###  4. Generate Static Playground (Optional)
+```bash
+npm run generate
+```
+This will generate a static version of the playground that can be deployed anywhere.
+
+
 ## Running Tests
 The project uses Vitest for testing.
 
