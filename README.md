@@ -46,7 +46,7 @@ function openSheet() {
 
 <template>
   <button @click="openSheet">Open Bottom Sheet</button>
-  <BottomSheet ref="sheetRef" :overlay="true" :darkMode="false" />
+  <BottomSheet ref="sheetRef" />
 </template>
 ```
 
@@ -78,7 +78,7 @@ function openSheet() {
 
 <template>
   <button @click="openSheet">Open Bottom Sheet</button>
-  <BottomSheet ref="sheetRef" :overlay="true" />
+  <BottomSheet ref="sheetRef" />
 </template>
 ```
 
@@ -100,7 +100,7 @@ export default defineNuxtConfig({
 | `canSwipeClose`           | `boolean`                    | `true`                 | Allows closing the sheet by swiping down. |
 | `snapPoints`              | `Array<number \| string>`    | `[200, '60%', '90%']`  | Snap points as percentages or pixel values. |
 | `initialSnapPoint`        | `number`                     | `0`                    | Initial snap point index. |
-| `overlay`                 | `boolean`                    | `false`                | Shows a dark overlay behind the sheet. |
+| `overlay`                 | `boolean`                    | `true`                 | Shows a dark overlay behind the sheet. |
 | `teleportTo`              | `string`                     | `'body'`               | Element selector for teleport rendering. |
 | `containerClass`          | `string`                     | `''`                   | Additional CSS class for the sheet container. |
 | `hideScrollbar`           | `boolean`                    | `false`                | Hides the scrollbar inside the sheet. |
@@ -163,7 +163,7 @@ onMounted(() => {
   <button @click="closeSheet">Close</button>
   <button @click="goToSecondSnap">Go to 60%</button>
 
-  <BottomSheet ref="sheetRef" :overlay="true">
+  <BottomSheet ref="sheetRef">
     <p>Your content here...</p>
   </BottomSheet>
 </template>

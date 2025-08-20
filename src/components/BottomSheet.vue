@@ -52,7 +52,7 @@ const props = withDefaults(
     canSwipeClose: true,
     snapPoints: () => [200, '60%', '90%'],
     initialSnapPoint: 0,
-    overlay: false,
+    overlay: true,
     teleportTo: 'body',
     containerClass: '',
     hideScrollbar: false,
