@@ -17,7 +17,6 @@
     "baseUrl": ".",
     "paths": { "@/*": ["src/*"] }
   },
-  "include": ["src/**/*", "index.ts", "nuxt.ts"],
+  "include": ["src/**/*", "index.ts", "nuxt.ts", "*.d.ts"],
   "exclude": ["node_modules", "dist"]
   }
-  
