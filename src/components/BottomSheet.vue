@@ -240,7 +240,7 @@ async function close() {
 
     setTimeout(() => {
       show.value = false
-      currentSnapIndex.value = 0
+      currentSnapIndex.value = initialSnapPoint.value
       cleanup()
       emit('close')
       resolve()
