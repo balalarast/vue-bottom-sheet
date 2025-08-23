@@ -17,6 +17,7 @@ const props = withDefaults(
     overlay?: boolean
     teleportTo?: string
     containerClass?: string
+    sheetClass?: string
     hideScrollbar?: boolean
     preventPullToRefresh?: boolean
     expandOnContentDrag?: boolean
@@ -55,6 +56,7 @@ const props = withDefaults(
     overlay: true,
     teleportTo: 'body',
     containerClass: '',
+    sheetClass: '',
     hideScrollbar: false,
     preventPullToRefresh: true,
     expandOnContentDrag: false,
@@ -238,6 +240,7 @@ async function close() {
 
     setTimeout(() => {
       show.value = false
+      currentSnapIndex.value = 0
       cleanup()
       emit('close')
       resolve()
@@ -595,6 +598,7 @@ defineExpose({
   snapToPoint,
   pixelSnapPoints,
   getOriginalIndex,
+  currentSnapIndex: computed(() => currentSnapIndex.value)
 })
 </script>
 
@@ -604,6 +608,7 @@ defineExpose({
       v-if="show || hasBeenOpened"
       v-show="show"
       class="ba-bs-container"
+      :class="containerClass"
       :data-theme="darkMode ? 'dark' : undefined"
       data-ba-container
     >
@@ -618,7 +623,7 @@ defineExpose({
         v-if="isClient"
         ref="sheetRef"
         class="ba-bs-sheet"
-        :class="containerClass"
+        :class="sheetClass"
         :style="{ height: maxHeight + 'px', willChange: 'height' }"
         tabindex="-1"
         :initial="{ height: '0px', opacity: 0 }"
