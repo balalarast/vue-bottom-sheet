@@ -205,7 +205,7 @@ function getValidInitialHeight(): number {
   return initialHeight
 }
 
-const updatePixelSnapPoints = () => {
+const initAndUpdatePanelHeight = () => {
   vh.value = window.innerHeight
 
   const initialHeight = getValidInitialHeight()
@@ -216,12 +216,12 @@ const updatePixelSnapPoints = () => {
 
 onMounted(() => {
   isClient.value = true
-  updatePixelSnapPoints()
-  window.addEventListener('resize', updatePixelSnapPoints)
+  initAndUpdatePanelHeight()
+  window.addEventListener('resize', initAndUpdatePanelHeight)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', updatePixelSnapPoints)
+  window.removeEventListener('resize', initAndUpdatePanelHeight)
 })
 
 async function open() {
