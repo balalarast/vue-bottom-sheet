@@ -186,6 +186,8 @@ let startHeight = 0
 let rafId: number | null = null
 let pendingDelta: number | null = null
 
+let hasResetDragStart = false
+
 const useEasing = true
 const maxOvershootRatio = 1 + 0.2
 
@@ -267,7 +269,7 @@ function getOriginalIndex(sortedIndex: number): number {
   return snapOriginalIndices.value[sortedIndex]
 }
 
-function recordDragPos(y: number, isStartDrag: boolean = false) {
+function recordDragPos(y: number, isStartDrag: boolean = false, disableChangeHeight: boolean = false) {
   const now = performance.now()
 
   if (isStartDrag) {
@@ -276,9 +278,11 @@ function recordDragPos(y: number, isStartDrag: boolean = false) {
 
     startY = y
     startTime = now
-    startHeight =
-      sheetRef.value?.$el?.offsetHeight || parseFloat(panelHeight.value)
-    panelHeight.value = `${startHeight}px`
+    if(!disableChangeHeight) {
+      startHeight =
+        sheetRef.value?.$el?.offsetHeight || parseFloat(panelHeight.value)
+      panelHeight.value = `${startHeight}px`
+    }
   }
 
   const dy = y - lastY
@@ -293,7 +297,7 @@ function recordDragPos(y: number, isStartDrag: boolean = false) {
   lastTime = now
 }
 
-const handleDragDecision = () => {
+const handleDragDecision = (clientY: number) => {
   if (!isScrollAllowed.value) return true
 
   if (canScrollDrag.value) return true
@@ -309,8 +313,20 @@ const handleDragDecision = () => {
   const atTop = el.scrollTop <= 0
   const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight
 
-  if (isDraggingDown && atTop) return true
-  if (isDraggingUp && atBottom) return true
+  if (isDraggingDown && atTop) {
+    if(!hasResetDragStart) {
+      recordDragPos(clientY, true, true)
+    }
+    hasResetDragStart = true
+    return true
+  }
+  if (isDraggingUp && atBottom) {
+    if(!hasResetDragStart) {
+      recordDragPos(clientY, true, true)
+    }
+    hasResetDragStart = true
+    return true
+  }
 
   return false
 }
@@ -324,6 +340,7 @@ const startDrag = (e: PointerEvent | TouchEvent, fromScroll = false) => {
   if (!fromScroll) isScrollAllowed.value = false
 
   isDragging.value = true
+  hasResetDragStart = false
 
   const isTouch = e.type.startsWith('touch')
   const clientY = isTouch
@@ -345,7 +362,7 @@ const onPointerDrag = (e: PointerEvent) => {
   recordDragPos(e.clientY)
 
   if (!isDragging.value) return
-  if (!handleDragDecision()) return
+  if (!handleDragDecision(e.clientY)) return
 
   emit('dragStart')
 
@@ -363,7 +380,7 @@ const onTouchDrag = (e: TouchEvent) => {
   recordDragPos(e.touches[0].clientY)
 
   if (!isDragging.value) return
-  if (!handleDragDecision()) return
+  if (!handleDragDecision(e.touches[0].clientY)) return
 
   e.preventDefault()
 
@@ -611,7 +628,7 @@ defineExpose({
       <div
         v-if="overlay"
         class="ba-bs-overlay"
-        @click="close"
+        v-on="canSwipeClose ? { click: close } : {}"
         data-ba-overlay
       />
 
