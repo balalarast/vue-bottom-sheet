@@ -484,8 +484,17 @@ function shouldClose(
     distanceDragged > closeMinDragDistance.value &&
     elapsedTime <= closeMaxTapTime.value
 
-  const closeThresholdPx =
-    (maxSnapHeight - minSnapHeight) * closeRelativeThreshold.value
+  // ------------------ Threshold ------------------
+  let closeThresholdPx: number
+
+  if (isAtLowestSnap) {
+    // وقتی روی پایین‌ترین اسنپ هستیم
+    // آستانه رو نسبتی از ارتفاع همین اسنپ حساب کن
+    closeThresholdPx = currSnapHeight * closeRelativeThreshold.value
+  } else {
+    // حالت عادی (فاصله بین max و min)
+    closeThresholdPx = (maxSnapHeight - minSnapHeight) * closeRelativeThreshold.value
+  }
 
   let fastCloseDecision = false
   if (fastClose.value) {
