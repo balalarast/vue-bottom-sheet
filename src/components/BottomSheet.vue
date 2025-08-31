@@ -758,6 +758,7 @@ defineExpose({
   inset: 0;
   background: var(--ba-overlay-bg);
   pointer-events: auto !important;
+  user-select: none;
 }
 
 .ba-bs-sheet {
