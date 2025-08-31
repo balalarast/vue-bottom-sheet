@@ -4,11 +4,12 @@ import {
   type ComponentPublicInstance,
   computed,
   nextTick,
-  onMounted,
   onBeforeUnmount,
+  onMounted,
   ref,
 } from 'vue'
 
+// ------------------------ Props ------------------------
 const props = withDefaults(
   defineProps<{
     darkMode?: boolean
@@ -78,13 +79,7 @@ const props = withDefaults(
   },
 )
 
-/**
- * @emits open - emitted when the bottom sheet is opened
- * @emits close - emitted when the bottom sheet is closed
- * @emits snapChange - emitted when the snap point changes, provides the snap index
- * @emits dragStart - emitted when dragging starts
- * @emits dragEnd - emitted when dragging ends, provides the final snap index
- */
+// ------------------------ Emits ------------------------
 const emit = defineEmits<{
   (e: 'open'): void
   (e: 'close'): void
@@ -93,6 +88,7 @@ const emit = defineEmits<{
   (e: 'dragEnd', finalIndex: number): void
 }>()
 
+// ------------------------ Refs ------------------------
 const show = ref(false)
 const hasBeenOpened = ref(false)
 const isClient = ref(false)
@@ -104,6 +100,8 @@ const isDragging = ref(false)
 const vh = ref(0)
 
 const snapOriginalIndices = ref<number[]>([])
+
+// ------------------------ Computed ------------------------
 const pixelSnapPoints = computed<number[]>(() => {
   let pointsWithIndex = props.snapPoints
     .map((p, index) => {
@@ -176,7 +174,7 @@ const canScrollDrag = computed(
     expandOnContentDrag.value && currentSnapIndex.value < maxSnapIndex.value,
 )
 
-// Drag state and parameters
+// ------------------------ Drag state ------------------------
 let startY = 0
 let lastY = 0
 let deltaY = 0
@@ -192,6 +190,7 @@ let hasResetDragStart = false
 const useEasing = true
 const maxOvershootRatio = 1 + 0.2
 
+// ------------------------ Helper Functions ------------------------
 function getValidInitialHeight(): number {
   let initialHeight =
     pixelSnapPoints.value[initialSnapPoint.value] ?? pixelSnapPoints.value[0]
@@ -205,7 +204,7 @@ function getValidInitialHeight(): number {
   return initialHeight
 }
 
-const initAndUpdatePanelHeight = () => {
+function initAndUpdatePanelHeight() {
   vh.value = window.innerHeight
 
   const initialHeight = getValidInitialHeight()
@@ -214,6 +213,7 @@ const initAndUpdatePanelHeight = () => {
   targetHeight.value = `${initialHeight}px`
 }
 
+// ------------------------ Lifecycle ------------------------
 onMounted(() => {
   isClient.value = true
   initAndUpdatePanelHeight()
@@ -224,6 +224,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', initAndUpdatePanelHeight)
 })
 
+// ------------------------ Panel Controls ------------------------
 async function open() {
   return new Promise<void>(resolve => {
     if (!hasBeenOpened.value) {
@@ -280,7 +281,11 @@ function getOriginalIndex(sortedIndex: number): number {
   return snapOriginalIndices.value[sortedIndex]
 }
 
-function recordDragPos(y: number, isStartDrag: boolean = false, skipHeightChange: boolean = false) {
+function recordDragPos(
+  y: number,
+  isStartDrag: boolean = false,
+  skipHeightChange: boolean = false,
+) {
   const now = performance.now()
 
   if (isStartDrag) {
@@ -289,7 +294,7 @@ function recordDragPos(y: number, isStartDrag: boolean = false, skipHeightChange
 
     startY = y
     startTime = now
-    if(!skipHeightChange) {
+    if (!skipHeightChange) {
       startHeight =
         sheetRef.value?.$el?.offsetHeight || parseFloat(panelHeight.value)
       panelHeight.value = `${startHeight}px`
@@ -325,10 +330,11 @@ const handleDragDecision = () => {
   const TOLERANCE = 1 // px, adjust to 2 if needed
 
   const atTop = el.scrollTop <= TOLERANCE
-  const atBottom = (el.scrollHeight - (el.scrollTop + el.clientHeight)) <= TOLERANCE
+  const atBottom =
+    el.scrollHeight - (el.scrollTop + el.clientHeight) <= TOLERANCE
 
   if (isDraggingDown && atTop) {
-    if(!hasResetDragStart) {
+    if (!hasResetDragStart) {
       recordDragPos(lastY, true, true)
     }
     hasResetDragStart = true
@@ -336,7 +342,7 @@ const handleDragDecision = () => {
   }
 
   if (isDraggingUp && atBottom) {
-    if(!hasResetDragStart) {
+    if (!hasResetDragStart) {
       recordDragPos(lastY, true, true)
     }
     hasResetDragStart = true
@@ -504,7 +510,8 @@ function shouldClose(
     closeThresholdPx = currSnapHeight * closeRelativeThreshold.value
   } else {
     // حالت عادی (فاصله بین max و min)
-    closeThresholdPx = (maxSnapHeight - minSnapHeight) * closeRelativeThreshold.value
+    closeThresholdPx =
+      (maxSnapHeight - minSnapHeight) * closeRelativeThreshold.value
   }
 
   let fastCloseDecision = false
@@ -635,7 +642,7 @@ defineExpose({
   snapToPoint,
   pixelSnapPoints,
   getOriginalIndex,
-  currentSnapIndex: computed(() => currentSnapIndex.value)
+  currentSnapIndex: computed(() => currentSnapIndex.value),
 })
 </script>
 
