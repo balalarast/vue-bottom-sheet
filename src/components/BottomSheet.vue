@@ -269,7 +269,7 @@ function getOriginalIndex(sortedIndex: number): number {
   return snapOriginalIndices.value[sortedIndex]
 }
 
-function recordDragPos(y: number, isStartDrag: boolean = false, disableChangeHeight: boolean = false) {
+function recordDragPos(y: number, isStartDrag: boolean = false, skipHeightChange: boolean = false) {
   const now = performance.now()
 
   if (isStartDrag) {
@@ -278,7 +278,7 @@ function recordDragPos(y: number, isStartDrag: boolean = false, disableChangeHei
 
     startY = y
     startTime = now
-    if(!disableChangeHeight) {
+    if(!skipHeightChange) {
       startHeight =
         sheetRef.value?.$el?.offsetHeight || parseFloat(panelHeight.value)
       panelHeight.value = `${startHeight}px`
@@ -310,8 +310,11 @@ const handleDragDecision = (clientY: number) => {
   const isDraggingDown = deltaY < 0
   const isDraggingUp = deltaY > 0
 
-  const atTop = el.scrollTop <= 0
-  const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight
+  // tolerance to avoid rounding/subpixel issues on mobile
+  const TOLERANCE = 1 // px, adjust to 2 if needed
+
+  const atTop = el.scrollTop <= TOLERANCE
+  const atBottom = (el.scrollHeight - (el.scrollTop + el.clientHeight)) <= TOLERANCE
 
   if (isDraggingDown && atTop) {
     if(!hasResetDragStart) {
@@ -320,6 +323,7 @@ const handleDragDecision = (clientY: number) => {
     hasResetDragStart = true
     return true
   }
+
   if (isDraggingUp && atBottom) {
     if(!hasResetDragStart) {
       recordDragPos(clientY, true, true)
