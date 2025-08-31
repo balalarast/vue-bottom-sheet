@@ -5,9 +5,9 @@ import BottomSheet from '../src/components/BottomSheet.vue'
 // Refs
 const bottomSheetRef = ref<InstanceType<typeof BottomSheet>>()
 const itemRefs = ref<HTMLElement[]>([])
-const snapPoints = ref<(`${number}%` | number)[]>(['50%', '90%'])
+const snapPoints = ref<(`${number}%` | number)[]>([150, '50%', '90%'])
 const snapPointsInput = ref(snapPoints.value.join(','))
-const currentSnapPointIndex = ref(0)
+const currentSnapPointIndex = ref(1)
 const activeItemIndex = ref<number | null>(null)
 const isLightTheme = ref(true)
 const canSwipeClose = ref(true)
@@ -32,10 +32,6 @@ const toggleTheme = () => {
 
 const snapToPoint = (snapPoint: number) => {
   bottomSheetRef.value?.snapToPoint(snapPoint)
-}
-
-const handleDragEnd = (finalIndex: number) => {
-  currentSnapPointIndex.value = finalIndex
 }
 
 const selectItem = (index: number) => {
@@ -64,6 +60,12 @@ const updateSnapPoints = () => {
     .map(s => (s.endsWith('%') ? s : parseFloat(s))) as (`${number}%` | number)[]
 }
 
+watch(snapPoints, () => {
+  if(snapPoints.value.length - 1 < currentSnapPointIndex.value) {
+    currentSnapPointIndex.value = snapPoints.value.length - 1
+  }
+})
+
 // Lifecycle
 onMounted(async () => {
   await nextTick()
@@ -82,8 +84,8 @@ onUnmounted(() => {
       &nbsp;
       <button @click="toggleTheme">Dark/Light</button>
       <div class="playground-settings">
-        <div>
-          <label>
+        <div style="border: 1px solid #eee; padding: 10px; display: flex; flex-direction: column; gap: 10px;">
+          <label style="display: block;">
             Snap Points (comma separated):
             <input
               type="text"
@@ -91,7 +93,13 @@ onUnmounted(() => {
               placeholder="Example: 100, 50%, 90%"
             />
           </label>
-          <button @click="updateSnapPoints">Apply</button>
+
+          <label style="display: block;">
+            Initial Snap Point Index:
+            <input type="number" v-model.number="currentSnapPointIndex" min="0" :max="snapPoints.length - 1" />
+          </label>
+
+          <button style="align-self: flex-start;" @click="updateSnapPoints">Apply</button>
         </div>
 
         <div class="setting-item">
@@ -165,7 +173,6 @@ onUnmounted(() => {
         :snap-points="snapPoints"
         :dark-mode="!isLightTheme"
         @vue:mounted="openSheet"
-        @drag-end="handleDragEnd"
       >
         <template #header>
           <div>Bottom Sheet Demo</div>
