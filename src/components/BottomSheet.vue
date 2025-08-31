@@ -297,7 +297,7 @@ function recordDragPos(y: number, isStartDrag: boolean = false, skipHeightChange
   lastTime = now
 }
 
-const handleDragDecision = (clientY: number) => {
+const handleDragDecision = () => {
   if (!isScrollAllowed.value) return true
 
   if (canScrollDrag.value) return true
@@ -318,7 +318,7 @@ const handleDragDecision = (clientY: number) => {
 
   if (isDraggingDown && atTop) {
     if(!hasResetDragStart) {
-      recordDragPos(clientY, true, true)
+      recordDragPos(lastY, true, true)
     }
     hasResetDragStart = true
     return true
@@ -326,7 +326,7 @@ const handleDragDecision = (clientY: number) => {
 
   if (isDraggingUp && atBottom) {
     if(!hasResetDragStart) {
-      recordDragPos(clientY, true, true)
+      recordDragPos(lastY, true, true)
     }
     hasResetDragStart = true
     return true
@@ -366,7 +366,7 @@ const onPointerDrag = (e: PointerEvent) => {
   recordDragPos(e.clientY)
 
   if (!isDragging.value) return
-  if (!handleDragDecision(e.clientY)) return
+  if (!handleDragDecision()) return
 
   emit('dragStart')
 
@@ -384,7 +384,7 @@ const onTouchDrag = (e: TouchEvent) => {
   recordDragPos(e.touches[0].clientY)
 
   if (!isDragging.value) return
-  if (!handleDragDecision(e.touches[0].clientY)) return
+  if (!handleDragDecision()) return
 
   e.preventDefault()
 
