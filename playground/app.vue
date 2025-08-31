@@ -5,6 +5,8 @@ import BottomSheet from '../src/components/BottomSheet.vue'
 // Refs
 const bottomSheetRef = ref<InstanceType<typeof BottomSheet>>()
 const itemRefs = ref<HTMLElement[]>([])
+const snapPoints = ref<(`${number}%` | number)[]>(['50%', '90%'])
+const snapPointsInput = ref(snapPoints.value.join(','))
 const currentSnapPointIndex = ref(0)
 const activeItemIndex = ref<number | null>(null)
 const isLightTheme = ref(true)
@@ -55,6 +57,13 @@ const scrollToActiveItem = () => {
   })
 }
 
+const updateSnapPoints = () => {
+  snapPoints.value = snapPointsInput.value
+    .split(',')
+    .map(s => s.trim())
+    .map(s => (s.endsWith('%') ? s : parseFloat(s))) as (`${number}%` | number)[]
+}
+
 // Lifecycle
 onMounted(async () => {
   await nextTick()
@@ -73,6 +82,18 @@ onUnmounted(() => {
       &nbsp;
       <button @click="toggleTheme">Dark/Light</button>
       <div class="playground-settings">
+        <div>
+          <label>
+            Snap Points (comma separated):
+            <input
+              type="text"
+              v-model="snapPointsInput"
+              placeholder="Example: 100, 50%, 90%"
+            />
+          </label>
+          <button @click="updateSnapPoints">Apply</button>
+        </div>
+
         <div class="setting-item">
           <label>
             <input type="checkbox" v-model="canSwipeClose" /> Enable Swipe to Close
@@ -141,7 +162,7 @@ onUnmounted(() => {
         :fast-close="fastCloseEnabled"
         :disable-edge-bounce="disableEdgeBounce"
         :hide-scrollbar="true"
-        :snap-points="['50%', '90%']"
+        :snap-points="snapPoints"
         :dark-mode="!isLightTheme"
         @vue:mounted="openSheet"
         @drag-end="handleDragEnd"

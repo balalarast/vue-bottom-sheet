@@ -5,6 +5,7 @@ import {
   computed,
   nextTick,
   onMounted,
+  onBeforeUnmount,
   ref,
 } from 'vue'
 
@@ -100,15 +101,15 @@ const scrollRef = ref<HTMLElement | null>(null)
 const panelHeight = ref('0px')
 const targetHeight = ref('0px')
 const isDragging = ref(false)
+const vh = ref(0)
 
 const snapOriginalIndices = ref<number[]>([])
 const pixelSnapPoints = computed<number[]>(() => {
-  const vh = window.innerHeight
   let pointsWithIndex = props.snapPoints
     .map((p, index) => {
       let val = 0
       if (typeof p === 'string' && p.endsWith('%')) {
-        val = (parseFloat(p) / 100) * vh
+        val = (parseFloat(p) / 100) * vh.value
       } else if (typeof p === 'number') {
         val = p
       }
@@ -204,13 +205,23 @@ function getValidInitialHeight(): number {
   return initialHeight
 }
 
-onMounted(() => {
-  isClient.value = true
+const updatePixelSnapPoints = () => {
+  vh.value = window.innerHeight
 
   const initialHeight = getValidInitialHeight()
 
   panelHeight.value = `${initialHeight}px`
   targetHeight.value = `${initialHeight}px`
+}
+
+onMounted(() => {
+  isClient.value = true
+  updatePixelSnapPoints()
+  window.addEventListener('resize', updatePixelSnapPoints)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updatePixelSnapPoints)
 })
 
 async function open() {
