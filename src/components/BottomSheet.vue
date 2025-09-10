@@ -79,6 +79,9 @@ const props = withDefaults(
   },
 )
 
+// ------------------------ Consts ------------------------
+const nonPassiveOpts: AddEventListenerOptions = { passive: false }
+
 // ------------------------ Emits ------------------------
 const emit = defineEmits<{
   (e: 'open'): void
@@ -213,20 +216,40 @@ function initAndUpdatePanelHeight() {
   targetHeight.value = `${initialHeight}px`
 }
 
+const onKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && show.value && canSwipeClose.value) {
+    close()
+  }
+}
+
+function normalizeInitialSnapIndex(index: number): number {
+  const length = pixelSnapPoints.value.length
+  if (length === 0) return 0
+  if (index < 0) return 0
+  if (index >= length) return length - 1
+  return index
+}
+
 // ------------------------ Lifecycle ------------------------
 onMounted(() => {
   isClient.value = true
   initAndUpdatePanelHeight()
   window.addEventListener('resize', initAndUpdatePanelHeight)
+  window.addEventListener('keydown', onKeyDown)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', initAndUpdatePanelHeight)
+  window.removeEventListener('keydown', onKeyDown)
+  cleanup()
+  cancelRaf()
 })
 
 // ------------------------ Panel Controls ------------------------
 async function open() {
   return new Promise<void>(resolve => {
+    lockBodyScroll()
+
     if (!hasBeenOpened.value) {
       hasBeenOpened.value = true
     }
@@ -238,7 +261,7 @@ async function open() {
       const initialHeight = getValidInitialHeight()
 
       targetHeight.value = `${initialHeight}px`
-      currentSnapIndex.value = initialSnapPoint.value
+      currentSnapIndex.value = normalizeInitialSnapIndex(initialSnapPoint.value)
       resolve()
     })
   })
@@ -250,27 +273,40 @@ async function close() {
 
     setTimeout(() => {
       show.value = false
-      currentSnapIndex.value = initialSnapPoint.value
+      currentSnapIndex.value = normalizeInitialSnapIndex(initialSnapPoint.value)
       cleanup()
+      unlockBodyScroll()
       emit('close')
       resolve()
     }, animationDuration.value)
   })
 }
 
+function lockBodyScroll() {
+  document.documentElement.style.overflow = 'hidden'
+  document.body.style.overflow = 'hidden'
+}
+function unlockBodyScroll() {
+  document.documentElement.style.overflow = ''
+  document.body.style.overflow = ''
+}
+
 function snapToPoint(index: number) {
-  if (index < 0 || index >= pixelSnapPoints.value.length) {
-    console.warn('snapToPoint: index out of range')
-    return
+  const newIndex = normalizeInitialSnapIndex(index)
+
+  if (process.env.NODE_ENV === 'development' && newIndex !== index) {
+    console.warn(
+      `[BottomSheet] snapToPoint: index ${index} is out of range. Using ${newIndex} instead.`
+    )
   }
 
-  if (currentSnapIndex.value != index) {
-    const point = pixelSnapPoints.value[index]
+  if (currentSnapIndex.value != newIndex) {
+    const point = pixelSnapPoints.value[newIndex]
     targetHeight.value = `${point}px`
-    currentSnapIndex.value = index
+    currentSnapIndex.value = newIndex
 
     cleanup()
-    emit('snapChange', index)
+    emit('snapChange', newIndex)
   }
 }
 
@@ -306,14 +342,15 @@ function recordDragPos(
   deltaY = startY - y
 
   if (dt > 0) {
-    velocity = (dy / dt) * 1000 // px/s
+    const instantVel = (dy / dt) * 1000
+    velocity = velocity * 0.7 + instantVel * 0.3
   }
 
   lastY = y
   lastTime = now
 }
 
-const handleDragDecision = () => {
+function handleDragDecision() {
   if (!isScrollAllowed.value) return true
 
   if (canScrollDrag.value) return true
@@ -333,15 +370,7 @@ const handleDragDecision = () => {
   const atBottom =
     el.scrollHeight - (el.scrollTop + el.clientHeight) <= TOLERANCE
 
-  if (isDraggingDown && atTop) {
-    if (!hasResetDragStart) {
-      recordDragPos(lastY, true, true)
-    }
-    hasResetDragStart = true
-    return true
-  }
-
-  if (isDraggingUp && atBottom) {
+  if ((isDraggingDown && atTop) || (isDraggingUp && atBottom)) {
     if (!hasResetDragStart) {
       recordDragPos(lastY, true, true)
     }
@@ -352,12 +381,12 @@ const handleDragDecision = () => {
   return false
 }
 
-const startDragFromScroll = (e: PointerEvent | TouchEvent) => {
+function startDragFromScroll(e: PointerEvent | TouchEvent) {
   isScrollAllowed.value = true
   startDrag(e, true)
 }
 
-const startDrag = (e: PointerEvent | TouchEvent, fromScroll = false) => {
+function startDrag(e: PointerEvent | TouchEvent, fromScroll = false) {
   if (!fromScroll) isScrollAllowed.value = false
 
   isDragging.value = true
@@ -371,36 +400,33 @@ const startDrag = (e: PointerEvent | TouchEvent, fromScroll = false) => {
   recordDragPos(clientY, true)
 
   if (isTouch) {
-    window.addEventListener('touchmove', onTouchDrag, { passive: false })
+    window.addEventListener('touchmove', onTouchDrag, nonPassiveOpts)
     window.addEventListener('touchend', endDrag)
   } else {
-    window.addEventListener('pointermove', onPointerDrag)
+    window.addEventListener('pointermove', onPointerDrag, nonPassiveOpts)
     window.addEventListener('pointerup', endDrag)
   }
 }
 
-const onPointerDrag = (e: PointerEvent) => {
+function onPointerDrag(e: PointerEvent) {
+  if (!isDragging.value) return
+
   recordDragPos(e.clientY)
 
-  if (!isDragging.value) return
   if (!handleDragDecision()) return
 
   emit('dragStart')
 
   pendingDelta = startHeight + (startY - e.clientY)
 
-  if (!rafId) {
-    rafId = requestAnimationFrame(() => {
-      updateHeightSmooth(pendingDelta!)
-      rafId = null
-    })
-  }
+  requestRaf(() => updateHeightSmooth(pendingDelta!))
 }
 
-const onTouchDrag = (e: TouchEvent) => {
+function onTouchDrag(e: TouchEvent) {
+  if (!isDragging.value) return
+
   recordDragPos(e.touches[0].clientY)
 
-  if (!isDragging.value) return
   if (!handleDragDecision()) return
 
   e.preventDefault()
@@ -409,11 +435,22 @@ const onTouchDrag = (e: TouchEvent) => {
 
   pendingDelta = startHeight + (startY - e.touches[0].clientY)
 
+  requestRaf(() => updateHeightSmooth(pendingDelta!))
+}
+
+function requestRaf(callback: () => void) {
   if (!rafId) {
     rafId = requestAnimationFrame(() => {
-      updateHeightSmooth(pendingDelta!)
+      callback()
       rafId = null
     })
+  }
+}
+
+function cancelRaf() {
+  if (rafId) {
+    cancelAnimationFrame(rafId)
+    rafId = null
   }
 }
 
@@ -423,7 +460,7 @@ function clampHeight(height: number) {
   return Math.min(Math.max(height, minAllowedHeight), maxAllowedHeight)
 }
 
-const updateHeightSmooth = (rawHeight: number) => {
+function updateHeightSmooth(rawHeight: number) {
   let newHeight = rawHeight
 
   if (rawHeight < minHeight.value) {
@@ -436,7 +473,6 @@ const updateHeightSmooth = (rawHeight: number) => {
         const diff = minHeight.value - rawHeight
         const easedDiff = useEasing ? Math.sqrt(diff) * 5 : diff
         newHeight = minHeight.value - Math.min(diff, easedDiff)
-        newHeight = clampHeight(newHeight)
       }
     }
   } else if (rawHeight > maxHeight.value) {
@@ -449,7 +485,6 @@ const updateHeightSmooth = (rawHeight: number) => {
       const diff = rawHeight - maxHeight.value
       const easedDiff = useEasing ? Math.sqrt(diff) * 5 : diff
       newHeight = maxHeight.value + Math.min(diff, easedDiff)
-      newHeight = clampHeight(newHeight)
     }
   }
 
@@ -457,7 +492,7 @@ const updateHeightSmooth = (rawHeight: number) => {
 
   if (isScrollAllowed.value) {
     newHeight = newHeight > maxHeight.value ? maxHeight.value : newHeight
-    panelHeight.value = `${newHeight}px`
+    panelHeight.value = `${clampHeight(newHeight)}px`
     return
   }
 
@@ -547,11 +582,12 @@ function shouldClose(
 
   return false
 }
-const calculateTargetIndex = (
+
+function calculateTargetIndex(
   currHeight: number,
   elapsedTime: number,
   movingDown: boolean,
-): number => {
+): number {
   const closestIndex = findNearestSnapIndex(currHeight)
   let targetIndex = closestIndex
   let candidateIndex: number
@@ -583,13 +619,10 @@ const calculateTargetIndex = (
   return targetIndex
 }
 
-const endDrag = () => {
+function endDrag() {
   isDragging.value = false
 
-  if (rafId) {
-    cancelAnimationFrame(rafId)
-    rafId = null
-  }
+  cancelRaf()
 
   const currHeight = parseFloat(panelHeight.value)
   const currSnapHeight = pixelSnapPoints.value[currentSnapIndex.value]
@@ -628,10 +661,10 @@ const endDrag = () => {
   emit('dragEnd', targetIndex)
 }
 
-const cleanup = () => {
-  window.removeEventListener('touchmove', onTouchDrag)
+function cleanup() {
+  window.removeEventListener('touchmove', onTouchDrag, nonPassiveOpts)
   window.removeEventListener('touchend', endDrag)
-  window.removeEventListener('pointermove', onPointerDrag)
+  window.removeEventListener('pointermove', onPointerDrag, nonPassiveOpts)
   window.removeEventListener('pointerup', endDrag)
 }
 
@@ -659,7 +692,7 @@ defineExpose({
       <div
         v-if="overlay"
         class="ba-bs-overlay"
-        v-on="canSwipeClose ? { click: close } : {}"
+        @click="canSwipeClose && close()"
         data-ba-overlay
       />
 
@@ -728,20 +761,21 @@ defineExpose({
 
 <style>
 :root {
-  --ba-overlay-bg: rgba(15, 23, 42, 0.5);
-  --ba-bg: #ffffff;
-  --ba-bg-dark: rgb(30, 41, 59);
-  --ba-border-color: rgb(229, 231, 235);
-  --ba-border-color-dark: rgb(51, 65, 85);
-  --ba-radius: 1rem;
-  --ba-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  --ba-max-width: 640px;
-  --ba-handle-width: 48px;
-  --ba-handle-height: 6px;
-  --ba-handle-color: rgb(209, 213, 219);
-  --ba-handle-color-dark: rgb(71, 85, 105);
-  --ba-padding: 16px;
-  --ba-padding-small: 8px;
+  --ba-bs-overlay-bg-opacity: 0.2;
+  --ba-bs-overlay-bg: rgba(15, 23, 42, var(--ba-bs-overlay-bg-opacity));
+  --ba-bs-bg: #ffffff;
+  --ba-bs-bg-dark: rgb(30, 41, 59);
+  --ba-bs-border-color: rgb(229, 231, 235);
+  --ba-bs-border-color-dark: rgb(51, 65, 85);
+  --ba-bs-radius: 1rem;
+  --ba-bs-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  --ba-bs-max-width: 640px;
+  --ba-bs-handle-width: 48px;
+  --ba-bs-handle-height: 6px;
+  --ba-bs-handle-color: rgb(209, 213, 219);
+  --ba-bs-handle-color-dark: rgb(71, 85, 105);
+  --ba-bs-padding: 16px;
+  --ba-bs-padding-small: 8px;
 }
 
 .ba-bs-container {
@@ -751,14 +785,16 @@ defineExpose({
   pointer-events: none;
   z-index: 20;
   visibility: visible;
+  overscroll-behavior: contain;
 }
 
 .ba-bs-overlay {
   position: absolute;
   inset: 0;
-  background: var(--ba-overlay-bg);
+  background: var(--ba-bs-overlay-bg);
   pointer-events: auto !important;
   user-select: none;
+  touch-action: none;
 }
 
 .ba-bs-sheet {
@@ -766,27 +802,30 @@ defineExpose({
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--ba-bg);
-  border-radius: var(--ba-radius) var(--ba-radius) 0 0;
-  box-shadow: var(--ba-shadow);
+  background: var(--ba-bs-bg);
+  border-radius: var(--ba-bs-radius) var(--ba-bs-radius) 0 0;
+  box-shadow: var(--ba-bs-shadow);
   overflow: hidden;
   pointer-events: auto;
-  max-width: var(--ba-max-width);
+  max-width: var(--ba-bs-max-width);
   margin: 0 auto;
   user-select: none;
+  touch-action: none;
 }
 
 .ba-bs-wrapper {
   display: flex;
   flex-direction: column;
   height: 100%;
+  user-select: none;
+  touch-action: none;
 }
 
 .ba-bs-header {
   position: relative;
   flex-shrink: 0;
-  padding: calc(var(--ba-padding) + 4px) var(--ba-padding)
-    var(--ba-padding-small);
+  padding: calc(var(--ba-bs-padding) + 4px) var(--ba-bs-padding)
+    var(--ba-bs-padding-small);
 }
 
 .ba-bs-header::before {
@@ -795,19 +834,21 @@ defineExpose({
   top: 8px;
   left: 50%;
   transform: translateX(-50%);
-  width: var(--ba-handle-width);
-  height: var(--ba-handle-height);
+  width: var(--ba-bs-handle-width);
+  height: var(--ba-bs-handle-height);
   border-radius: 9999px;
-  background: var(--ba-handle-color);
+  background: var(--ba-bs-handle-color);
 }
 
 .ba-bs-header--border {
-  border-bottom: 1px solid var(--ba-border-color);
+  border-bottom: 1px solid var(--ba-bs-border-color);
 }
 
 .ba-bs-scroll {
   flex: 1;
   overflow: auto;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
   user-select: text;
   scroll-behavior: smooth;
 }
@@ -824,29 +865,29 @@ defineExpose({
 }
 
 .ba-bs-content {
-  padding: var(--ba-padding);
-  padding-top: var(--ba-padding-small);
+  padding: var(--ba-bs-padding);
+  padding-top: var(--ba-bs-padding-small);
 }
 
 .ba-bs-footer {
   flex-shrink: 0;
-  padding: var(--ba-padding);
-  border-top: 1px solid var(--ba-border-color);
+  padding: var(--ba-bs-padding);
+  border-top: 1px solid var(--ba-bs-border-color);
 }
 
 /* حالت دارک */
 [data-theme='dark'] {
   .ba-bs-sheet {
-    background: var(--ba-bg-dark);
+    background: var(--ba-bs-bg-dark);
   }
   .ba-bs-header::before {
-    background: var(--ba-handle-color-dark);
+    background: var(--ba-bs-handle-color-dark);
   }
   .ba-bs-header--border {
-    border-bottom-color: var(--ba-border-color-dark);
+    border-bottom-color: var(--ba-bs-border-color-dark);
   }
   .ba-bs-footer {
-    border-top-color: var(--ba-border-color-dark);
+    border-top-color: var(--ba-bs-border-color-dark);
   }
 }
 </style>

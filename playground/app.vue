@@ -222,7 +222,7 @@ onUnmounted(() => {
   border: none !important;
 }
 .ba-bs-scroll {
-  border-radius: var(--ba-radius) var(--ba-radius) var(--ba-radius) var(--ba-radius);
+  border-radius: var(--ba-bs-radius) var(--ba-bs-radius) var(--ba-bs-radius) var(--ba-bs-radius);
   background-color: rgb(148,163,184, .2);
   margin: 0 20px;
 }
