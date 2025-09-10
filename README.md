@@ -5,6 +5,7 @@
 [![License](https://img.shields.io/npm/l/@balalarast/vue-bottom-sheet)](https://www.npmjs.com/package/@balalarast/vue-bottom-sheet)
 [![Downloads](https://img.shields.io/npm/dm/@balalarast/vue-bottom-sheet)](https://www.npmjs.com/package/@balalarast/vue-bottom-sheet)
 [![Playground](https://img.shields.io/badge/Playground-Demo-blue)](https://vue-bottom-sheet-alpha.vercel.app/)
+[![Nuxt 3 & 4 Compatible](https://img.shields.io/badge/Nuxt-3%20%26%204-blue)]()
 
 Bottom Sheet component for Vue 3, Nuxt 3, and Nuxt 4 with drag support, multiple snap points, and dark mode.  
 Built with [@oku-ui/motion](https://motion.oku-ui.com) for smooth and performant animations.
