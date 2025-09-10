@@ -11,13 +11,14 @@ Built with [@oku-ui/motion](https://motion.oku-ui.com) for smooth and performant
 
 ## Table of Contents
 
+- [Compatibility](#compatibility)
 - [Features](#features)
 - [Demo](#demo)
 - [Install](#install)
 - [Usage in Vue 3](#usage-in-vue-3)
   - [1. Registering the Component Globally (Recommended)](#1-registering-the-component-globally-recommended)
   - [2. Direct Import in Components](#2-direct-import-in-components)
-- [Usage in Nuxt 3](#usage-in-nuxt-3)
+- [Usage in Nuxt 3 & Nuxt 4](#usage-in-nuxt-3--nuxt-4)
   - [1. Using Nuxt Module (Recommended)](#1-using-nuxt-module-recommended)
   - [2. Registering the Component in Plugins](#2-registering-the-component-in-plugins)
   - [3. Direct Import in Components](#3-direct-import-in-components)
@@ -28,9 +29,15 @@ Built with [@oku-ui/motion](https://motion.oku-ui.com) for smooth and performant
 - [Running Playground](#running-playground)
 - [Running Tests](#running-tests)
 
+## Compatibility
+
+This package is fully compatible with:
+- Vue 3
+- Nuxt 3
+- Nuxt 4
+
 ## Features
 
-- Compatible with Vue 3 and Nuxt 3
 - Smooth open and close animations powered by [@oku-ui/motion](https://motion.oku-ui.com)
 - Support for multiple snap points (percentage and pixel values)
 - Drag support with adjustable panel height
@@ -114,7 +121,7 @@ function openSheet() {
 </template>
 ```
 
-## Usage in Nuxt 3
+## Usage in Nuxt 3 & Nuxt 4
 
 You can use **any one** of the following methods — choose the one that best fits your project setup.
 
