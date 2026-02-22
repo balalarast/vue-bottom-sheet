@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { ref } from 'vue'
 import BottomSheet from '../src/components/BottomSheet.vue'
 
 // Refs
