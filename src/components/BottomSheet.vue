@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { lockBodyScroll, unlockBodyScroll } from '../utils/scrollLock';
 import { Motion } from '@oku-ui/motion'
 import {
   type ComponentPublicInstance,
@@ -81,6 +82,7 @@ const props = withDefaults(
 
 // ------------------------ Consts ------------------------
 const nonPassiveOpts: AddEventListenerOptions = { passive: false }
+const __DEV__ = import.meta.env?.DEV ?? false
 
 // ------------------------ Emits ------------------------
 const emit = defineEmits<{
@@ -100,6 +102,8 @@ const scrollRef = ref<HTMLElement | null>(null)
 const panelHeight = ref('0px')
 const targetHeight = ref('0px')
 const isDragging = ref(false)
+const hasLockedScroll = ref(false)
+const closeTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 const vh = ref(0)
 
 const snapOriginalIndices = ref<number[]>([])
@@ -243,12 +247,26 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
   cleanup()
   cancelRaf()
+
+  // Clear any previous pending close timeout
+  if (closeTimeout.value) {
+    clearTimeout(closeTimeout.value)
+    closeTimeout.value = null
+  }
+
+  if (hasLockedScroll.value) {
+    unlockBodyScroll()
+    hasLockedScroll.value = false
+  }
 })
 
 // ------------------------ Panel Controls ------------------------
 async function open() {
   return new Promise<void>(resolve => {
-    lockBodyScroll()
+    if (!hasLockedScroll.value) {
+      lockBodyScroll()
+      hasLockedScroll.value = true
+    }
 
     if (!hasBeenOpened.value) {
       hasBeenOpened.value = true
@@ -271,30 +289,33 @@ async function close() {
   return new Promise<void>(resolve => {
     targetHeight.value = '0px'
 
-    setTimeout(() => {
+    // Clear any previous pending close timeout
+    if (closeTimeout.value) {
+      clearTimeout(closeTimeout.value)
+      closeTimeout.value = null
+    }
+
+    closeTimeout.value = setTimeout(() => {
       show.value = false
       currentSnapIndex.value = normalizeInitialSnapIndex(initialSnapPoint.value)
       cleanup()
-      unlockBodyScroll()
+      if (hasLockedScroll.value) {
+        unlockBodyScroll()
+        hasLockedScroll.value = false
+      }
       emit('close')
+
+      closeTimeout.value = null
+
       resolve()
     }, animationDuration.value)
   })
 }
 
-function lockBodyScroll() {
-  document.documentElement.style.overflow = 'hidden'
-  document.body.style.overflow = 'hidden'
-}
-function unlockBodyScroll() {
-  document.documentElement.style.overflow = ''
-  document.body.style.overflow = ''
-}
-
 function snapToPoint(index: number) {
   const newIndex = normalizeInitialSnapIndex(index)
 
-  if (process.env.NODE_ENV === 'development' && newIndex !== index) {
+  if (__DEV__ && newIndex !== index) {
     console.warn(
       `[BottomSheet] snapToPoint: index ${index} is out of range. Using ${newIndex} instead.`
     )
@@ -532,9 +553,14 @@ function shouldClose(
   const pulledDownPx = Math.max(0, minSnapHeight - currHeight)
   const distancePulled = Math.max(0, currSnapHeight - currHeight)
 
-  const isQuickTap =
-    distanceDragged > closeMinDragDistance.value &&
+  const draggedEnoughForClose =
+    distanceDragged > closeMinDragDistance.value
+
+  const isFastGesture =
     elapsedTime <= closeMaxTapTime.value
+
+  const isFastCloseGesture =
+    draggedEnoughForClose && isFastGesture
 
   // ------------------ Threshold ------------------
   let closeThresholdPx: number
@@ -575,7 +601,7 @@ function shouldClose(
     movingDown &&
     ((fastClose.value && fastCloseDecision) ||
       pulledDownPx >= closeThresholdPx ||
-      (isAtLowestSnap && isQuickTap))
+      (isAtLowestSnap && isFastCloseGesture))
   ) {
     return true
   }
@@ -701,7 +727,10 @@ defineExpose({
         ref="sheetRef"
         class="ba-bs-sheet"
         :class="sheetClass"
-        :style="{ height: maxHeight + 'px', willChange: 'height' }"
+        :style="{
+          height: maxHeight + 'px',
+          willChange: isDragging ? 'height' : undefined
+        }"
         tabindex="-1"
         :initial="{ height: '0px', opacity: 0 }"
         :animate="{ height: animatedHeight, opacity: 1 }"
@@ -889,5 +918,9 @@ defineExpose({
   .ba-bs-footer {
     border-top-color: var(--ba-bs-border-color-dark);
   }
+}
+.ba-lock {
+  overflow: hidden!important;
+  touch-action: none!important;
 }
 </style>
