@@ -65,16 +65,6 @@ watch(snapPoints, () => {
     currentSnapPointIndex.value = snapPoints.value.length - 1
   }
 })
-
-// Lifecycle
-onMounted(async () => {
-  await nextTick()
-  document.body.classList.add('overflow-hidden')
-})
-
-onUnmounted(() => {
-  document.body.classList.remove('overflow-hidden')
-})
 </script>
 
 <template>
