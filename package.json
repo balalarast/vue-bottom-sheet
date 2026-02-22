@@ -1,6 +1,6 @@
 {
   "name": "@balalarast/vue-bottom-sheet",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "A bottom sheet component for Vue 3 and Nuxt 3",
   "type": "module",
   "main": "index.ts",
