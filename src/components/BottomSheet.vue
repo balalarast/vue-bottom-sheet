@@ -202,7 +202,7 @@ function getValidInitialHeight(): number {
   let initialHeight =
     pixelSnapPoints.value[initialSnapPoint.value] ?? pixelSnapPoints.value[0]
 
-  if (isNaN(initialHeight) || initialHeight <= 0) {
+  if (initialHeight === undefined || isNaN(initialHeight) || initialHeight <= 0) {
     console.warn(
       `Invalid initial height detected: ${initialHeight}. Setting to 100px default.`,
     )
@@ -335,7 +335,7 @@ function getOriginalIndex(sortedIndex: number): number {
   if (sortedIndex < 0 || sortedIndex >= snapOriginalIndices.value.length) {
     return -1
   }
-  return snapOriginalIndices.value[sortedIndex]
+  return snapOriginalIndices.value[sortedIndex] ?? 0
 }
 
 function recordDragPos(
@@ -415,8 +415,10 @@ function startDrag(e: PointerEvent | TouchEvent, fromScroll = false) {
 
   const isTouch = e.type.startsWith('touch')
   const clientY = isTouch
-    ? (e as TouchEvent).touches[0].clientY
+    ? (e as TouchEvent).touches[0]?.clientY
     : (e as PointerEvent).clientY
+
+  if (clientY === undefined) return
 
   recordDragPos(clientY, true)
 
@@ -446,7 +448,10 @@ function onPointerDrag(e: PointerEvent) {
 function onTouchDrag(e: TouchEvent) {
   if (!isDragging.value) return
 
-  recordDragPos(e.touches[0].clientY)
+  const touchClientY = e.touches[0]?.clientY
+  if (touchClientY === undefined) return
+
+  recordDragPos(touchClientY)
 
   if (!handleDragDecision()) return
 
@@ -454,7 +459,7 @@ function onTouchDrag(e: TouchEvent) {
 
   emit('dragStart')
 
-  pendingDelta = startHeight + (startY - e.touches[0].clientY)
+  pendingDelta = startHeight + (startY - touchClientY)
 
   requestRaf(() => updateHeightSmooth(pendingDelta!))
 }
@@ -550,6 +555,8 @@ function shouldClose(
   const maxSnapHeight = pixelSnapPoints.value[maxSnapIndex.value]
   const isAtLowestSnap = currentIndex === minSnapIndex.value
 
+  if (minSnapHeight === undefined || currSnapHeight === undefined || maxSnapHeight === undefined) return false
+
   const pulledDownPx = Math.max(0, minSnapHeight - currHeight)
   const distancePulled = Math.max(0, currSnapHeight - currHeight)
 
@@ -632,8 +639,11 @@ function calculateTargetIndex(
     targetIndex = candidateIndex
   } else {
     const currSnapHeight = pixelSnapPoints.value[currentSnapIndex.value]
-    const midPoint =
-      (currSnapHeight + pixelSnapPoints.value[candidateIndex]) / 2
+    const pixelSnapPoint = pixelSnapPoints.value[candidateIndex]
+
+    if (currSnapHeight === undefined || pixelSnapPoint === undefined) return 0
+
+    const midPoint = (currSnapHeight + pixelSnapPoint) / 2
 
     if (movingDown) {
       targetIndex = currHeight > midPoint ? closestIndex : candidateIndex
@@ -652,6 +662,8 @@ function endDrag() {
 
   const currHeight = parseFloat(panelHeight.value)
   const currSnapHeight = pixelSnapPoints.value[currentSnapIndex.value]
+
+  if(currSnapHeight === undefined) return
 
   const movingDown = deltaY !== 0 ? deltaY < 0 : velocity > 0
 
